@@ -1,9 +1,11 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
-#include "types.h"
-#include "dxerr9.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <string>
+#include "dxerr9.h"
+#include "types.h"
 
 class Exception
 {

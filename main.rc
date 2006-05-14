@@ -68,9 +68,15 @@ IDR_MENU1 MENU
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "&Open\tCtrl+O",               ID_FILE_OPEN
+        MENUITEM "&Open Model\tCtrl+O",         ID_FILE_OPEN
+        MENUITEM "Open &Animation\tCtrl+Shift+O", ID_FILE_OPENANIMATION
+        , GRAYED
         MENUITEM SEPARATOR
         MENUITEM "&Exit",                       ID_FILE_EXIT
+    END
+    POPUP "&Model", GRAYED
+    BEGIN
+        MENUITEM "&Details",                    ID_MODEL_DETAILS40012
     END
     POPUP "&Help"
     BEGIN
@@ -106,6 +112,25 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,325,24,50,14
 END
 
+IDD_DIALOG1 DIALOGEX 0, 0, 392, 273
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU | WS_THICKFRAME
+EXSTYLE WS_EX_WINDOWEDGE
+CAPTION "Model details"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Close",IDCANCEL,169,252,50,14
+    CONTROL         "",IDC_TAB1,"SysTabControl32",0x0,7,6,189,240
+    CONTROL         "",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | WS_BORDER | WS_TABSTOP,
+                    14,25,175,214,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_TREE2,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | NOT WS_VISIBLE | 
+                    WS_BORDER | WS_TABSTOP,15,26,174,214,WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT1,203,20,182,225,ES_MULTILINE | ES_READONLY | 
+                    WS_VSCROLL | WS_HSCROLL
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -130,6 +155,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 240
     END
+
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 385
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 266
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -143,8 +176,22 @@ IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
     "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
     VK_F1,          ID_HELP_ABOUT,          VIRTKEY, NOINVERT
+    "O",            ID_FILE_OPENANIMATION,  VIRTKEY, SHIFT, CONTROL, 
+                                                    NOINVERT
 END
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "Icon Entry_1.ico"
+IDI_ICON2               ICON                    "Icon Entry_2.ico"
+IDI_ICON_PLAY           ICON                    "play.ico"
+IDI_ICON_PAUSE          ICON                    "pause.ico"
 #endif    // Dutch (Netherlands) resources
 /////////////////////////////////////////////////////////////////////////////
 

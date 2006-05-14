@@ -32,7 +32,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib"
+				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="libs"
@@ -80,10 +80,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib"
+				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="libs"
+				AdditionalLibraryDirectories="libs;C:\Program Files\Microsoft DirectX SDK (February 2006)\Lib\x86"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -119,16 +119,31 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
+				RelativePath=".\animation.cpp">
+			</File>
+			<File
+				RelativePath=".\chunks.cpp">
+			</File>
+			<File
 				RelativePath=".\crc32.cpp">
 			</File>
 			<File
+				RelativePath=".\dialogs.cpp">
+			</File>
+			<File
 				RelativePath=".\engine.cpp">
+			</File>
+			<File
+				RelativePath=".\files.cpp">
 			</File>
 			<File
 				RelativePath=".\main.cpp">
 			</File>
 			<File
 				RelativePath=".\managers.cpp">
+			</File>
+			<File
+				RelativePath=".\mesh.cpp">
 			</File>
 			<File
 				RelativePath=".\model.cpp">
@@ -142,7 +157,16 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
+				RelativePath=".\animation.h">
+			</File>
+			<File
+				RelativePath=".\chunks.h">
+			</File>
+			<File
 				RelativePath=".\crc32.h">
+			</File>
+			<File
+				RelativePath=".\dialogs.h">
 			</File>
 			<File
 				RelativePath=".\engine.h">
@@ -151,7 +175,13 @@
 				RelativePath=".\exceptions.h">
 			</File>
 			<File
+				RelativePath=".\files.h">
+			</File>
+			<File
 				RelativePath=".\managers.h">
+			</File>
+			<File
+				RelativePath=".\mesh.h">
 			</File>
 			<File
 				RelativePath=".\model.h">
@@ -171,7 +201,25 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
 			<File
+				RelativePath=".\Icon Entry_1.ico">
+			</File>
+			<File
+				RelativePath=".\Icon Entry_2.ico">
+			</File>
+			<File
+				RelativePath=".\icon1.ico">
+			</File>
+			<File
+				RelativePath=".\icon2.ico">
+			</File>
+			<File
 				RelativePath=".\main.rc">
+			</File>
+			<File
+				RelativePath=".\pause.ico">
+			</File>
+			<File
+				RelativePath=".\play.ico">
 			</File>
 		</Filter>
 	</Files>

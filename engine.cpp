@@ -1,94 +1,310 @@
 #include <iostream>
+#include <set>
 #include "engine.h"
 #include "exceptions.h"
 using namespace std;
 
+class Engine::EngineImpl
+{
+	friend class Engine;
+
+	class AnimatedModel
+	{
+		D3DXMATRIX*  Matrices;
+		unsigned int numFrames;
+
+	public:
+		const D3DXMATRIX& getAnimatedBone(unsigned int bone, unsigned int frame) const
+		{
+			return Matrices[bone * numFrames + frame];
+		}
+
+		AnimatedModel(const Animation* anim, const Model& model);
+		~AnimatedModel();
+	};
+
+	class MeshInfo
+	{
+		bool					enabled;
+		const IMesh*            pMesh;
+		IDirect3DDevice9*       pDevice;
+		ID3DXMesh*              pD3DMesh;
+		const Model*            pModel;
+		ID3DXEffect*            pEffect;
+		IEffectManager*         effectManager;
+
+		void checkEffect();
+		void checkMesh();
+
+	public: 
+		bool              isEnabled() const         { return enabled; }
+		void              enable(bool enabled)      { this->enabled = enabled; }
+		const Effect*     getMeshEffect() const     { return pMesh->getEffect(0); }
+		ID3DXEffect*      getD3DXEffect()           { checkEffect(); return pEffect; }
+		ID3DXMesh*        getMesh()                 { checkMesh();   return pD3DMesh; }
+		const IMesh*      getIMesh() const          { return pMesh; }
+
+		void invalidate();
+
+		MeshInfo& operator=(const MeshInfo& meshinfo);
+
+		MeshInfo(const MeshInfo& meshinfo);
+		MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled = false);
+		~MeshInfo();
+	};
+
+	struct Settings
+	{
+		D3DXMATRIX  World;
+		D3DXMATRIX  View;
+		D3DXMATRIX  Projection;
+		Camera      Eye;
+		D3DLIGHT9   Lights[1];
+	};
+
+	D3DPRESENT_PARAMETERS        dpp;
+	Settings                     settings;
+
+	IDirect3D9*					 pD3D;
+	IDirect3DDevice9*			 pDevice;
+
+	ITextureManager* textureManager;
+	IEffectManager*  effectManager;
+
+	Model*         model;
+	AnimatedModel* animatedModel;
+
+	std::vector<MeshInfo> meshes;
+
+	void composeParametersTable(std::map<std::string,Parameter>& parameters);
+	void setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, std::vector<IDirect3DTexture9*>& usedTextures);
+	void setCamera( const Camera& camera );
+
+	bool render(unsigned int frame, const RENDERINFO& ri);
+	void reinitialize( HWND hWnd, int width, int height );
+
+	EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager);
+	~EngineImpl();
+};
+
+Engine::EngineImpl::AnimatedModel::AnimatedModel(const Animation* anim, const Model& model)
+{
+	unsigned int numBones     = model.getNumBones();
+	unsigned int numAnimBones = (anim == NULL) ? 0 : anim->getNumBoneAnimations();
+				 numFrames    = (anim == NULL) ? 1 : anim->getNumFrames();
+
+	Matrices = new D3DXMATRIX[numBones * numFrames];
+
+	// Keep track of what bones were animated
+	set<unsigned int> animatedBones;
+
+	for (unsigned int i = 0; i < numAnimBones; i++)
+	{
+		const BoneAnimation& ba = anim->getBoneAnimation(i);
+		unsigned int iBone = ba.getBoneIndex();
+		for (unsigned int frame = 0; frame < numFrames; frame++)
+		{
+			D3DXMATRIX& transform = Matrices[iBone * numFrames + frame];
+			D3DXMATRIX  translation;
+			D3DXVECTOR3 trans = ba.getTranslationOffset();
+
+			D3DXMatrixRotationQuaternion(&transform, &ba.getQuaternion( (ba.getNumQuaternions() > 1) ? frame : 0 ));
+			if (ba.getNumTranslations() > 0)
+			{
+				trans += ba.getTranslation(frame);
+			}
+			D3DXMatrixTranslation(&translation, trans.x, trans.y, trans.z);
+			D3DXMatrixMultiply(&transform, &transform, &translation);
+		}
+		animatedBones.insert( iBone );
+	}
+
+	for (unsigned int i = 0; i < numBones; i++)
+	{
+		// Fill everything else that isn't animated with default bone values
+		if (animatedBones.find(i) == animatedBones.end())
+		{
+			const D3DXMATRIX& transform = model.getBone(i)->matrix;
+			for (unsigned int frame = 0; frame < numFrames; frame++)
+			{
+				Matrices[i * numFrames + frame] = transform;
+			}
+		}
+
+		// Multiply with parent matrix to create absolute matrix
+		unsigned int parent = model.getBone(i)->parent;
+		if (parent != -1)
+		{
+			for (unsigned int frame = 0; frame < numFrames; frame++)
+			{
+				D3DXMatrixMultiply(&Matrices[i * numFrames + frame], &Matrices[i * numFrames + frame], &Matrices[parent * numFrames + frame] );
+			}
+		}
+
+	}
+}
+
+Engine::EngineImpl::AnimatedModel::~AnimatedModel()
+{
+	delete[] Matrices;
+}
+
 //
-// Engine::MeshInfo class
+// Engine::EngineImpl::MeshInfo class
 //
 
 // Invalidate the mesh
-void Engine::MeshInfo::invalidate()
+void Engine::EngineImpl::MeshInfo::invalidate()
 {
-	if (pIndexBuffer != NULL)  pIndexBuffer->Release();
-	if (pVertexBuffer != NULL) pVertexBuffer->Release();
-	pIndexBuffer  = NULL;
-	pVertexBuffer = NULL;
+	if (pEffect != NULL)
+	{
+		pEffect->Release();
+		pEffect = NULL;
+	}
+
+	if (pD3DMesh != NULL)
+	{
+		pD3DMesh->Release();
+		pD3DMesh = NULL;
+	}
 }
 
-// Make sure the vertex buffer is present
-void Engine::MeshInfo::checkVertexBuffer()
+void Engine::EngineImpl::MeshInfo::checkEffect()
 {
-	if (pVertexBuffer == NULL)
+	const Effect* effect = pMesh->getEffect(0);
+	if (pEffect == NULL && effect != NULL)
 	{
+		pEffect = effectManager->getEffect( pDevice, effect->name );
+		if (pEffect != NULL)
+		{
+			D3DXHANDLE hTechnique = NULL;
+			D3DXEFFECT_DESC desc;
+			pEffect->GetDesc(&desc);
+
+			const char* LODs[] = {"DX9", "DX8", "FIXEDFUNCTION"};
+			for (unsigned int lod = 0; lod < 2 && hTechnique == NULL; lod++)
+			{
+				for (unsigned int i = 0; i < desc.Techniques && hTechnique == NULL; i++)
+				{
+					D3DXTECHNIQUE_DESC tdesc;
+					D3DXHANDLE hTech = pEffect->GetTechnique(i);
+					pEffect->GetTechniqueDesc(hTech, &tdesc );
+					for (unsigned int j = 0; j < tdesc.Annotations; j++)
+					{
+						D3DXPARAMETER_DESC adesc;
+						D3DXHANDLE hAnn = pEffect->GetAnnotation(hTech, j);
+						pEffect->GetParameterDesc(hAnn, &adesc);
+						if (strcmp(adesc.Name,"LOD") == 0)
+						{
+							const char* value;
+							pEffect->GetString(hAnn, &value);
+							if (strcmp(value, LODs[lod]) == 0)
+							{
+								hTechnique = hTech;
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			pEffect->SetTechnique( hTechnique );
+		}
+	}
+}
+
+void Engine::EngineImpl::MeshInfo::checkMesh()
+{
+	if (pD3DMesh == NULL)
+	{
+		#pragma pack(1)
+		struct RSkinVertex
+		{
+			D3DXVECTOR3 Position;
+			D3DXVECTOR4 Normal;
+			D3DXVECTOR2 TexCoord;
+			D3DXVECTOR3 Tangent;
+			D3DXVECTOR3 Binormal;
+		};
+		#pragma pack()
+
+		const string& format = pMesh->getVertexFormat();
+		D3DVERTEXELEMENT9 elements[] = {
+			{0,   0, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_POSITION, 0},
+			{0,  12, D3DDECLTYPE_FLOAT4,   0, D3DDECLUSAGE_NORMAL  , 0},
+			{0,  28, D3DDECLTYPE_FLOAT2,   0, D3DDECLUSAGE_TEXCOORD, 0},
+			{0,  36, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_TANGENT,  0},
+			{0,  48, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_BINORMAL, 0},
+			D3DDECL_END()
+		};
+
 		HRESULT hErr;
-		if ((hErr = pDevice->CreateVertexBuffer( sizeof(Vertex) * pMesh->getNumVertices(), 0, 0, D3DPOOL_DEFAULT, &pVertexBuffer, NULL)) != D3D_OK)
+		if (FAILED(hErr = D3DXCreateMesh(pMesh->getNumTriangles(), pMesh->getNumVertices(), 0, elements, pDevice, &pD3DMesh)))
 		{
 			throw D3DException(hErr);
 		}
 
-		void* data;
-		pVertexBuffer->Lock(0, 0, &data, D3DLOCK_DISCARD);
-		memcpy(data, pMesh->getVertexBuffer(), pMesh->getNumVertices() * sizeof(Vertex));
-		pVertexBuffer->Unlock();
-	}
-}
+		// FIXME: This is a hack, figure out how it *should* be done
+		float texScale = (format == "alD3dVertRSkinNU2" || format == "alD3dVertB4I4NU2") ? 4096.0f : 1.0f;
 
-// Make sure the index buffer is present
-void Engine::MeshInfo::checkIndexBuffer()
-{
-	if (pIndexBuffer == NULL)
-	{
-		HRESULT hErr;
-		if ((hErr = pDevice->CreateIndexBuffer( sizeof(uint16_t) * 3 * pMesh->getNumTriangles(), 0, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &pIndexBuffer, NULL)) != D3D_OK)
+		RSkinVertex* data;
+		pD3DMesh->LockVertexBuffer(D3DLOCK_DISCARD, (void**)&data );
+		const Vertex* v = pMesh->getVertexBuffer();
+		for (unsigned int i = 0; i < pD3DMesh->GetNumVertices(); i++, data++, v++ )
 		{
-			pVertexBuffer->Release();
-			throw D3DException(hErr);
+			data->Position = v->Position;
+			data->Normal   = D3DXVECTOR4(v->Normal.x, v->Normal.y, v->Normal.z, (float)v->BoneIndices[0] );
+			data->TexCoord = v->TexCoord * texScale;
+			data->Tangent  = v->Tangent;
+			data->Binormal = v->Binormal;
 		}
+		pD3DMesh->UnlockVertexBuffer();
 
-		void* data;
-		pIndexBuffer->Lock(0, 0, &data, D3DLOCK_DISCARD);
-		memcpy(data, pMesh->getIndexBuffer(), 3 * pMesh->getNumTriangles() * sizeof(uint16_t));
-		pIndexBuffer->Unlock();
+		pD3DMesh->LockIndexBuffer(D3DLOCK_DISCARD, (void**)&data );
+		memcpy( data, pMesh->getIndexBuffer(), pD3DMesh->GetNumFaces() * 3 * sizeof(uint16_t) );
+		pD3DMesh->UnlockIndexBuffer();
 	}
 }
 
-Engine::MeshInfo& Engine::MeshInfo::operator=(const MeshInfo& meshinfo)
+Engine::EngineImpl::MeshInfo& Engine::EngineImpl::MeshInfo::operator=(const MeshInfo& meshinfo)
 {
-	enabled        = meshinfo.enabled;
-	pMesh          = meshinfo.pMesh;
-	pDevice        = meshinfo.pDevice;
-	pVertexBuffer  = meshinfo.pVertexBuffer;
-	pIndexBuffer   = meshinfo.pIndexBuffer;
-	transformation = meshinfo.transformation;
-	if (pVertexBuffer != NULL) pVertexBuffer->AddRef();
-	if (pIndexBuffer != NULL)  pIndexBuffer->AddRef();
+	enabled  = meshinfo.enabled;
+	pMesh    = meshinfo.pMesh;
+	pModel   = meshinfo.pModel;
+	pDevice  = meshinfo.pDevice;
+	pD3DMesh = meshinfo.pD3DMesh;
+	pEffect  = meshinfo.pEffect;
+	effectManager = meshinfo.effectManager;
+	if (pD3DMesh != NULL) pD3DMesh->AddRef();
+	if (pEffect  != NULL) pEffect ->AddRef();
 	return *this;
 }
 
-Engine::MeshInfo::MeshInfo(const MeshInfo& meshinfo)
+Engine::EngineImpl::MeshInfo::MeshInfo(const MeshInfo& meshinfo)
 {
-	enabled        = meshinfo.enabled;
-	pMesh          = meshinfo.pMesh;
-	pDevice        = meshinfo.pDevice;
-	pVertexBuffer  = meshinfo.pVertexBuffer;
-	pIndexBuffer   = meshinfo.pIndexBuffer;
-	transformation = meshinfo.transformation;
-	if (pVertexBuffer != NULL) pVertexBuffer->AddRef();
-	if (pIndexBuffer != NULL)  pIndexBuffer->AddRef();
+	enabled  = meshinfo.enabled;
+	pMesh    = meshinfo.pMesh;
+	pModel   = meshinfo.pModel;
+	pDevice  = meshinfo.pDevice;
+	pD3DMesh = meshinfo.pD3DMesh;
+	pEffect  = meshinfo.pEffect;
+	effectManager = meshinfo.effectManager;
+	if (pD3DMesh != NULL) pD3DMesh->AddRef();
+	if (pEffect  != NULL) pEffect ->AddRef();
 }
 
-Engine::MeshInfo::MeshInfo(IDirect3DDevice9* pDevice, const IMesh* mesh, const D3DXMATRIX& trans, bool enabled)
+Engine::EngineImpl::MeshInfo::MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled)
 {
-	pMesh          = mesh;
-	pVertexBuffer  = NULL;
-	pIndexBuffer   = NULL;
-	transformation = trans;
-	this->pDevice  = pDevice;
-	this->enabled  = enabled;
+	pMesh            = mesh;
+	pD3DMesh         = NULL;
+	pEffect          = NULL;
+	this->pModel     = model;
+	this->pDevice    = pDevice;
+	this->enabled    = enabled;
+	this->effectManager = effectManager;
 }
 
-Engine::MeshInfo::~MeshInfo()
+Engine::EngineImpl::MeshInfo::~MeshInfo()
 {
 	invalidate();
 }
@@ -98,7 +314,7 @@ Engine::MeshInfo::~MeshInfo()
 //
 
 // Create effect parameters based on current engine settings
-void Engine::composeParametersTable(map<string,Parameter>& parameters)
+void Engine::EngineImpl::composeParametersTable(map<string,Parameter>& parameters)
 {
 	Parameter param;
 
@@ -128,9 +344,9 @@ void Engine::composeParametersTable(map<string,Parameter>& parameters)
 	parameters.insert(make_pair("VIEWPROJECTION", param));
 
 	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Direction.x;
-	param.m_float4[1] = settings.Lights[0].Direction.y;
-	param.m_float4[2] = settings.Lights[0].Direction.z;
+	param.m_float4[0] = settings.Lights[0].Position.x;
+	param.m_float4[1] = settings.Lights[0].Position.y;
+	param.m_float4[2] = settings.Lights[0].Position.z;
 	param.m_float4[3] = 1.0f;
 	parameters.insert(make_pair("DIR_LIGHT_VEC_0", param));
 
@@ -142,18 +358,18 @@ void Engine::composeParametersTable(map<string,Parameter>& parameters)
 	parameters.insert(make_pair("DIR_LIGHT_OBJ_VEC_0", param));
 
 	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Diffuse.r;
-	param.m_float4[1] = settings.Lights[0].Diffuse.g;
-	param.m_float4[2] = settings.Lights[0].Diffuse.b;
-	param.m_float4[3] = settings.Lights[0].Diffuse.a;
-	parameters.insert(make_pair("DIR_LIGHT_DIFFUSE_0", param));
-
-	param.type = Parameter::FLOAT4;
 	param.m_float4[0] = settings.Lights[0].Specular.r;
 	param.m_float4[1] = settings.Lights[0].Specular.g;
 	param.m_float4[2] = settings.Lights[0].Specular.b;
 	param.m_float4[3] = settings.Lights[0].Specular.a;
 	parameters.insert(make_pair("DIR_LIGHT_SPECULAR_0", param));
+
+	param.type = Parameter::FLOAT4;
+	param.m_float4[0] = settings.Lights[0].Diffuse.r;
+	param.m_float4[1] = settings.Lights[0].Diffuse.g;
+	param.m_float4[2] = settings.Lights[0].Diffuse.b;
+	param.m_float4[3] = settings.Lights[0].Diffuse.a;
+	parameters.insert(make_pair("DIR_LIGHT_DIFFUSE_0", param));
 
 	param.type = Parameter::FLOAT4;
 	param.m_float4[0] = 1.0f;
@@ -177,17 +393,21 @@ void Engine::composeParametersTable(map<string,Parameter>& parameters)
 	parameters.insert(make_pair("EYE_OBJ_POSITION", param));
 
 	param.type = Parameter::FLOAT;
-	param.m_float = 0.0f;
+	param.m_float = GetTickCount() / 1000.0f;
 	parameters.insert(make_pair("TIME", param));
 }
 
 // Set the parameter for this effect
-void Engine::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, vector<IDirect3DTexture9*>& usedTextures)
+void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, vector<IDirect3DTexture9*>& usedTextures)
 {
 	switch (param.type)
 	{
 		case Parameter::FLOAT:
 			pEffect->SetFloat(hParam, param.m_float);
+			break;
+
+		case Parameter::FLOAT3:
+			pEffect->SetFloatArray(hParam, param.m_float3, 3);
 			break;
 
 		case Parameter::FLOAT4:
@@ -211,7 +431,13 @@ void Engine::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Paramet
 	}
 }
 
-bool Engine::render()
+void Engine::EngineImpl::setCamera( const Camera& camera )
+{
+	settings.Eye = camera;
+	D3DXMatrixLookAtRH(&settings.View, &camera.Position, &camera.Target, &camera.Up );
+}
+
+bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 {
 	// See if we can render
 	switch (pDevice->TestCooperativeLevel())
@@ -223,86 +449,130 @@ bool Engine::render()
 			return false;
 	}
 
+	// Prepare SPH_LIGHT_FILL matrices
+	D3DXMATRIX SPH_Light_Fill[3];
+	memset(SPH_Light_Fill, 0, sizeof(D3DXMATRIX)*3);
+	SPH_Light_Fill[0]._44 = settings.Lights[0].Ambient.r;
+	SPH_Light_Fill[1]._44 = settings.Lights[0].Ambient.g;
+	SPH_Light_Fill[2]._44 = settings.Lights[0].Ambient.b;
+
+	// Prepare SPH_LIGHT_ALL matrices
+	D3DXMATRIX SPH_Light_All[3];
+	memset(SPH_Light_All, 0, sizeof(D3DXMATRIX)*3);
+	SPH_Light_All[0]._44 = settings.Lights[0].Ambient.r;
+	SPH_Light_All[1]._44 = settings.Lights[0].Ambient.g;
+	SPH_Light_All[2]._44 = settings.Lights[0].Ambient.b;
+
 	// Yes, now clear
 	pDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
 	pDevice->BeginScene();
 
 	// Render all the meshes
-	for (vector<MeshInfo>::iterator p = meshes.begin(); p != meshes.end(); p++)
+	for (unsigned int i = 0; i < meshes.size(); i++)
 	{
-		if (!p->isEnabled())
+		MeshInfo& meshinfo = meshes[i];
+		if (!meshinfo.isEnabled())
 		{
 			continue;
 		}
 
-		// Set vertex and index buffer
-		const IMesh& mesh = p->getMesh();
-		pDevice->SetStreamSource(0, p->getVertexBuffer(), 0, sizeof(Vertex));
-		pDevice->SetIndices(p->getIndexBuffer());
+		pDevice->SetRenderState(D3DRS_CULLMODE, meshinfo.getIMesh()->getCulling()  );
+		pDevice->SetRenderState(D3DRS_FILLMODE, meshinfo.getIMesh()->getFillMode() );
 
 		// Set world transformation
-		settings.World = p->getTransformation();
+		settings.World = animatedModel->getAnimatedBone( model->getConnection(i), frame);
 
 		map<string,Parameter> parameters;
 		composeParametersTable(parameters);
 
-		ID3DXEffect* pEffect = NULL;
-		const Effect* effect = mesh.getEffect();
-		if (effect != NULL)
-		{
-			pEffect = effectManager->getEffect( pDevice, effect->name );
-		}
+		ID3DXEffect*  pD3DXEffect = meshinfo.getD3DXEffect();
+		const Effect* pMeshEffect = meshinfo.getMeshEffect();
 
-		if (pEffect != NULL)
+		if (pD3DXEffect != NULL && pMeshEffect != NULL)
 		{
 			// We have an effect, so use it
+			D3DXEFFECT_DESC effdesc;
+			pD3DXEffect->GetDesc(&effdesc);
+
 			vector<IDirect3DTexture9*> usedTextures;
 
-			// FIXME: This may not work for all effects; so what determines what technique to use?
-			D3DXHANDLE hTechnique = pEffect->GetTechnique(0);
-			pEffect->SetTechnique( hTechnique );
-
 			// Set the parameters with semantics from the effects file
-			D3DXHANDLE hParam;
-			for (int iParam = 0; (hParam = pEffect->GetParameter(NULL, iParam)) != NULL; iParam++)
+			for (unsigned int iParam = 0; iParam < effdesc.Parameters; iParam++)
 			{
-				if (pEffect->IsParameterUsed(hParam, hTechnique))
+				D3DXHANDLE hParam = pD3DXEffect->GetParameter(NULL, iParam);
+				D3DXPARAMETER_DESC desc;
+				pD3DXEffect->GetParameterDesc( hParam, &desc );
+				if (desc.Semantic != NULL)
 				{
-					D3DXPARAMETER_DESC desc;
-					pEffect->GetParameterDesc( hParam, &desc );
-					if (desc.Semantic != NULL)
+					if (strcmp(desc.Semantic,"SKINMATRIXARRAY") == 0)
+					{
+						D3DXMATRIX skinArray[24];
+
+						const IMesh* mesh = meshinfo.getIMesh();
+						unsigned long numMappings = mesh->getNumBoneMappings();
+						for (unsigned long m = 0; m < numMappings; m++)
+						{
+							unsigned long bone = mesh->getBoneMapping(m);
+							
+							D3DXMATRIX transform;
+							model->getBoneTransformation(bone, transform);
+							D3DXMatrixInverse(&transform, NULL, &transform);
+
+							skinArray[m] = animatedModel->getAnimatedBone(bone, frame);
+							D3DXMatrixMultiply(&skinArray[m], &transform, &skinArray[m]);
+						}
+
+						pD3DXEffect->SetMatrixArray(hParam, skinArray, numMappings);
+					}
+					else if (strcmp(desc.Semantic,"SPH_LIGHT_FILL") == 0)
+					{
+						pD3DXEffect->SetMatrixArray(hParam, SPH_Light_Fill, 3);
+					}
+					else if (strcmp(desc.Semantic,"SPH_LIGHT_ALL") == 0)
+					{
+						pD3DXEffect->SetMatrixArray(hParam, SPH_Light_All, 3);
+					}
+					else
 					{
 						map<string,Parameter>::const_iterator p = parameters.find(desc.Semantic);
 						if (p != parameters.end())
 						{
-							setParameter(pEffect, hParam, p->second, usedTextures);
+							setParameter(pD3DXEffect, hParam, p->second, usedTextures);
 						}
 					}
+				}
+
+				if (desc.Name != NULL && ri.useColor && strcmp(desc.Name, "Colorization") == 0)
+				{
+					float color[4] = { GetRValue(ri.color) / 255.0f, GetGValue(ri.color) / 255.0f, GetBValue(ri.color) / 255.0f, 1.0f};
+					pD3DXEffect->SetFloatArray(hParam, color, 4);
 				}
 			}
 
 			// Set the parameters from the mesh file
-			for (vector<Parameter>::const_iterator p = effect->parameters.begin(); p != effect->parameters.end(); p++)
+			for (vector<Parameter>::const_iterator p = pMeshEffect->parameters.begin(); p != pMeshEffect->parameters.end(); p++)
 			{
-				D3DXHANDLE hParam = pEffect->GetParameterByName( NULL, p->name.c_str() );
-				if (hParam != NULL)
+				if (p->name != "Colorization" || !ri.useColor)
 				{
-					setParameter(pEffect, hParam, *p, usedTextures );
+					D3DXHANDLE hParam = pD3DXEffect->GetParameterByName( NULL, p->name.c_str() );
+					if (hParam != NULL)
+					{
+						setParameter(pD3DXEffect, hParam, *p, usedTextures );
+					}
 				}
 			}
 	
 			// Use the effect to render the mesh
 			unsigned int nPasses;
-			pEffect->Begin(&nPasses, 0);
+			pD3DXEffect->Begin(&nPasses, 0);
 			for (unsigned int iPass = 0; iPass < nPasses; iPass++)
 			{	
-				pEffect->BeginPass(iPass);
-				pEffect->CommitChanges();
-				pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, mesh.getNumVertices(), 0, mesh.getNumTriangles() );
-				pEffect->EndPass();
+				pD3DXEffect->BeginPass(iPass);
+				pD3DXEffect->CommitChanges();
+				meshinfo.getMesh()->DrawSubset(0);
+				pD3DXEffect->EndPass();
 			}
-			pEffect->End();
-			pEffect->Release();
+			pD3DXEffect->End();
 
 			// Release the textures we used
 			for (vector<IDirect3DTexture9*>::iterator p = usedTextures.begin(); p != usedTextures.end(); p++)
@@ -312,51 +582,114 @@ bool Engine::render()
 		}
 	}
 
+	if (ri.showBones)
+	{
+		//
+		// Render the model's bones
+		//
+		struct BoneVertex
+		{
+				D3DXVECTOR3 pos;
+				D3DCOLOR    color;
+		};
+
+		unsigned int numBones = model->getNumBones();
+		BoneVertex* bonePoints = new BoneVertex[numBones];
+		BoneVertex* boneLines  = new BoneVertex[numBones*2];
+
+		// Create bone array
+		for (unsigned int i = 0; i < numBones; i++)
+		{
+			D3DXMATRIX transform;
+
+			// Create transformation matrix for this joint
+			transform = animatedModel->getAnimatedBone(i, frame);
+
+			D3DXVec3TransformCoord(&bonePoints[i].pos, &D3DXVECTOR3(0,0,0), &transform);
+			bonePoints[i].color = D3DCOLOR_XRGB(255,255,0);
+
+			boneLines[2*i+0].pos   = bonePoints[i].pos;
+			boneLines[2*i+0].color = D3DCOLOR_XRGB(255,255,0);
+			const Bone* bone = model->getBone(i);
+			if (bone->parent != -1)
+			{
+				// Create transformation matrix for parent joint
+				transform = animatedModel->getAnimatedBone(bone->parent, frame);
+			}
+			D3DXVec3TransformCoord(&boneLines[2*i+1].pos, &D3DXVECTOR3(0,0,0), &transform);
+			boneLines[2*i+1].color = D3DCOLOR_XRGB(255,255,0);
+		}
+
+		// Render bones
+		float PointSize = 4.0;
+		pDevice->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+		pDevice->SetRenderState(D3DRS_POINTSIZE, *(DWORD*)&PointSize);
+		D3DXMATRIX identity;
+		D3DXMatrixIdentity(&identity);
+		pDevice->SetTransform(D3DTS_WORLD, &identity);
+		pDevice->SetTransform(D3DTS_VIEW, &settings.View);
+		pDevice->SetTransform(D3DTS_PROJECTION, &settings.Projection);
+
+		pDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
+		pDevice->DrawPrimitiveUP(D3DPT_POINTLIST, numBones, bonePoints, sizeof(BoneVertex));
+		pDevice->DrawPrimitiveUP(D3DPT_LINELIST,  numBones, boneLines,  sizeof(BoneVertex));
+
+		delete[] boneLines;
+		delete[] bonePoints;
+	}
 	pDevice->EndScene();
 	pDevice->Present(NULL, NULL, NULL, NULL);
+
+	if (ri.showBones && ri.showBoneNames)
+	{
+		// Show bone names
+		HDC hDC = GetDC(dpp.hDeviceWindow);
+		SelectObject(hDC, GetStockObject(DEFAULT_GUI_FONT));
+		SetBkMode(hDC, TRANSPARENT);
+		SetTextColor(hDC, RGB(255,255,0));
+		SetTextAlign(hDC, TA_BASELINE | TA_CENTER);
+
+		D3DVIEWPORT9 viewport;
+		pDevice->GetViewport(&viewport);
+
+		D3DXMATRIX identity;
+		D3DXMatrixIdentity(&identity);
+
+		unsigned int numBones = model->getNumBones();
+		for (unsigned int i = 0; i < numBones; i++)
+		{
+			const Bone* bone = model->getBone(i);
+
+			// Get 3D bone position
+			D3DXMATRIX  transform;
+			D3DXVECTOR3 position;
+			transform = animatedModel->getAnimatedBone(i, frame);
+			D3DXVec3TransformCoord(&position, &D3DXVECTOR3(0,0,0), &transform);
+
+			// Project unto screen
+			D3DXVec3Project(&position, &position, &viewport, &settings.Projection, &settings.View, &identity );
+
+			if (position.z > 0 && position.z < 1)
+			{
+				int x = (int)position.x;
+				int y = (int)position.y;
+
+				// Draw bone name
+				TextOut(hDC, x, y - 5, bone->name.c_str(), (int)bone->name.length() );
+			}
+		}
+
+		ReleaseDC(dpp.hDeviceWindow, hDC);
+	}
+
 	return true;
 }
 
-// Get the current camera
-Engine::Camera Engine::getCamera()
-{
-	return settings.Eye;
-}
-
-// Set the new camera
-void Engine::setCamera( Engine::Camera& camera )
-{
-	settings.Eye = camera;
-	// Create view matrix from camera settings
-	D3DXMatrixLookAtLH(&settings.View, &settings.Eye.Position, &settings.Eye.Target, &settings.Eye.Up );
-}
-
-// Clear the mesh array
-void Engine::clearMeshes()
-{
-	meshes.clear();
-}
-
-void Engine::addMesh( const IMesh* mesh, const D3DXMATRIX& transformation, bool enabled )
-{
-	meshes.push_back( MeshInfo(pDevice, mesh, transformation, enabled) );
-}
-
-// Enable/disable a mesh
-void Engine::enableMesh(unsigned int i, bool enabled)
-{
-	if (i >= 0 && i < meshes.size())
-	{
-		meshes[i].enable( enabled );
-	}
-}
-
-void Engine::reinitialize( HWND hWnd, int width, int height )
+void Engine::EngineImpl::reinitialize( HWND hWnd, int width, int height )
 {
 	//
 	// Cleanup
 	//
-	pDecl->Release();
 	for (vector<MeshInfo>::iterator i = meshes.begin(); i != meshes.end(); i++)
 	{
 		i->invalidate();
@@ -380,37 +713,22 @@ void Engine::reinitialize( HWND hWnd, int width, int height )
 	//
 	// Reset parameters
 	//
-	D3DVERTEXELEMENT9 elements[] =
-	{
-		{0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-		{0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL,   0},
-		{0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
-		D3DDECL_END(),
-	};
-
-	if ((hErr = pDevice->CreateVertexDeclaration( elements, &pDecl )) != D3D_OK)
-	{
-		throw D3DException( hErr );
-	}
-	pDevice->SetVertexDeclaration( pDecl );
-
 	pDevice->SetRenderState(D3DRS_ZENABLE,  TRUE);
 	pDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-	pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
-	pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 
 	if (width > 0 && height > 0)
 	{
-		D3DXMatrixPerspectiveFovLH(&settings.Projection, D3DXToRadian(45), (float)width / height, 1.0f, 3000.0f );
+		D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)width / height, 1.0f, 10000.0f );
 	}
 }
 
-Engine::Engine(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager)
+Engine::EngineImpl::EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager)
 {
 	HRESULT hErr;
 
 	this->textureManager = textureManager;
 	this->effectManager  = effectManager;
+	this->model          = NULL;
 
 	if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
 	{
@@ -488,31 +806,14 @@ Engine::Engine(HWND hWnd, ITextureManager* textureManager, IEffectManager* effec
 	//
 	// Set the vertex declaration
 	//
-	D3DVERTEXELEMENT9 elements[] =
-	{
-		{0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-		{0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL,   0},
-		{0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
-		D3DDECL_END(),
-	};
-
-	if ((hErr = pDevice->CreateVertexDeclaration( elements, &pDecl )) != D3D_OK)
-	{
-		pDevice->Release();
-		pD3D->Release();
-		throw D3DException( hErr );
-	}
-	pDevice->SetVertexDeclaration( pDecl );
 
 	pDevice->SetRenderState(D3DRS_ZENABLE,  TRUE);
 	pDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-	pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
-	pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 
 	// Initialize projection matrix with perspective
 	RECT client;
 	GetClientRect( hWnd, &client );
-	D3DXMatrixPerspectiveFovLH(&settings.Projection, D3DXToRadian(45), (float)client.right / client.bottom, 1.0f, 3000.0f );
+	D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)client.right / client.bottom, 1.0f, 10000.0f );
 
 	// Initialize camera
 	Camera camera = {
@@ -526,19 +827,83 @@ Engine::Engine(HWND hWnd, ITextureManager* textureManager, IEffectManager* effec
 	D3DLIGHT9 light = 
 	{
 		D3DLIGHT_DIRECTIONAL,
-		{  0.6f,  0.6f,   0.6f, 1.0f},	// Diffuse
-		{  0.0f,  0.0f,   0.0f, 0.0f},	// Specular
-		{  0.1f,  0.1f,   0.1f, 1.0f},	// Ambient
-		{500.0f,  0.0f, 500.0f},		// Position
-		{ -1.0f,  0.0f,  -1.0f},		// Direction
+		{   0.5f,  0.5f,  0.5f,  1.0f},	// Diffuse
+		{   0.0f,  0.0f,  0.0f,  1.0f},	// Specular
+		{   0.25f, 0.25f, 0.25f, 1.0f},	// Ambient
+		{1500.0f,  0.0f,  1000.0f},		// Position
+		{  -0.83f, 0.0f, -0.55f},		// Direction
 	};
 	settings.Lights[0] = light;
+}
 
+Engine::EngineImpl::~EngineImpl()
+{
+	pDevice->Release();
+	pD3D->Release();
+}
+
+// Get the current camera
+const Camera& Engine::getCamera() const
+{
+	return pimpl->settings.Eye;
+}
+
+void Engine::setCamera( const Camera& camera )
+{
+	pimpl->setCamera( camera );
+}
+
+void Engine::enableMesh(unsigned int i, bool enabled)
+{
+	if (i >= 0 && i < pimpl->meshes.size())
+	{
+		pimpl->meshes[i].enable( enabled );
+	}
+}
+
+Model* Engine::getModel() const
+{
+	return pimpl->model;
+}
+
+void Engine::setModel(Model* model)
+{
+	delete pimpl->animatedModel;
+
+	pimpl->model         = model;
+	pimpl->animatedModel = new EngineImpl::AnimatedModel(NULL, *model);
+
+	pimpl->meshes.clear();
+	for (unsigned int i = 0; i < model->getNumMeshes(); i++)
+	{
+		pimpl->meshes.push_back( EngineImpl::MeshInfo(pimpl->effectManager, pimpl->pDevice, model, (const IMesh*)model->getMesh(i)) );
+	}
+}
+
+void Engine::applyAnimation(const Animation* animation)
+{
+	delete pimpl->animatedModel;
+	pimpl->animatedModel = new EngineImpl::AnimatedModel(animation, *pimpl->model);
+}
+
+bool Engine::render(unsigned int frame, const RENDERINFO& ri)
+{
+	return pimpl->render(frame, ri);
+}
+
+void Engine::reinitialize( HWND hWnd, int width, int height )
+{
+	pimpl->reinitialize(hWnd, width, height);
+}
+
+Engine::Engine(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager)
+	: pimpl( new EngineImpl(hWnd, textureManager, effectManager ))
+{
+	pimpl->animatedModel = NULL;
 }
 
 Engine::~Engine()
 {
-	pDecl->Release();
-	pDevice->Release();
-	pD3D->Release();
+	delete pimpl->animatedModel;
+	delete pimpl;
 }

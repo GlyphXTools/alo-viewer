@@ -1,82 +1,109 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "types.h"
+#include <string>
+#include <vector>
+
+#include "animation.h"
 #include "model.h"
+#include "managers.h"
+
+struct Parameter
+{
+	enum Type
+	{
+		FLOAT,
+		FLOAT3,
+		FLOAT4,
+		TEXTURE,
+		MATRIX,
+	};
+
+	std::string name;			// Name of the parameter
+	Type        type;			// Type of the parameter
+
+	float       m_float;		// Valid if type is FLOAT
+	float		m_float3[3];	// Valid if type is FLOAT3
+	float		m_float4[4];	// Valid if type is FLOAT4
+	D3DXMATRIX  m_matrix;		// Valud if type is MATRIX
+	std::string m_texture;		// Valid if type is TEXTURE
+};
+
+struct Effect
+{
+	std::string				name;
+	std::vector<Parameter>	parameters;
+};
+
+#pragma pack(1)
+struct Vertex
+{
+	D3DXVECTOR3 Position;			//   0	00
+	D3DXVECTOR3 Normal;				//  12	0C
+	D3DXVECTOR2 TexCoord;			//  24  18
+	float       filler1[6];			//  32	20
+	D3DXVECTOR3 Tangent;			//  56	38
+	D3DXVECTOR3 Binormal;			//  68  44
+	float       filler2[8];			//  80  50
+	DWORD       BoneIndices[4];		// 112	70
+	float       BoneWeights[4];		// 128  80
+};
+#pragma pack()
+
+// Describes a camera
+struct Camera
+{
+	D3DXVECTOR3 Position;
+	D3DXVECTOR3 Target;
+	D3DXVECTOR3 Up;
+};
+
+class IMesh
+{
+public:
+	// Get the vertex and index buffer, respectively
+	virtual const Vertex*      getVertexBuffer()    const = 0;
+	virtual const uint16_t*    getIndexBuffer()     const = 0;
+	virtual unsigned long      getNumVertices()     const = 0;
+	virtual unsigned long      getNumTriangles()    const = 0;
+	virtual const std::string& getVertexFormat()    const = 0;
+	virtual D3DFILLMODE        getFillMode()        const = 0;
+	virtual D3DCULL            getCulling()         const = 0;
+	virtual unsigned int       getNumEffects()      const = 0;
+	virtual const Effect*      getEffect(int index) const = 0;
+	virtual unsigned long      getBoneMapping(int i) const = 0;
+	virtual unsigned long      getNumBoneMappings()  const = 0;
+	virtual ~IMesh() {}
+};
+
+struct RENDERINFO
+{
+	bool     showBones;
+	bool     showBoneNames;
+	bool     useColor;
+	COLORREF color;
+};
 
 class Engine
 {
-public:
-	struct Camera
-	{
-		D3DXVECTOR3 Position;
-		D3DXVECTOR3 Target;
-		D3DXVECTOR3 Up;
-	};
-
 private:
-	class MeshInfo
-	{
-		bool					enabled;
-		const IMesh*            pMesh;
-		IDirect3DVertexBuffer9* pVertexBuffer;
-		IDirect3DIndexBuffer9*  pIndexBuffer;
-		IDirect3DDevice9*       pDevice;
-		D3DXMATRIX				transformation;
-
-		void checkVertexBuffer();
-		void checkIndexBuffer();
-
-	public: 
-		bool              isEnabled() const         { return enabled; }
-		void              enable(bool enabled)      { this->enabled = enabled; }
-		const IMesh&      getMesh() const           { return *pMesh; }
-		const D3DXMATRIX  getTransformation() const { return transformation; }
-		IDirect3DVertexBuffer9* getVertexBuffer()   { checkVertexBuffer(); return pVertexBuffer; }
-		IDirect3DIndexBuffer9*  getIndexBuffer()    { checkIndexBuffer();  return pIndexBuffer; }
-
-		void invalidate();
-
-		MeshInfo& operator=(const MeshInfo& meshinfo);
-
-		MeshInfo(const MeshInfo& meshinfo);
-		MeshInfo(IDirect3DDevice9* pDevice, const IMesh* mesh, const D3DXMATRIX& transformation, bool enabled = false);
-		~MeshInfo();
-	};
-
-	struct Settings
-	{
-		D3DXMATRIX  World;
-		D3DXMATRIX  View;
-		D3DXMATRIX  Projection;
-		Camera      Eye;
-		D3DLIGHT9   Lights[1];
-	};
-
-	D3DPRESENT_PARAMETERS        dpp;
-	Settings                     settings;
-
-	IDirect3D9*					 pD3D;
-	IDirect3DDevice9*			 pDevice;
-	IDirect3DVertexDeclaration9* pDecl;
-
-	ITextureManager* textureManager;
-	IEffectManager*  effectManager;
-
-	std::vector<MeshInfo> meshes;
-
-	void composeParametersTable(std::map<std::string,Parameter>& parameters);
-	void setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, std::vector<IDirect3DTexture9*>& usedTextures);
+	class EngineImpl;
+	EngineImpl* pimpl;
 
 public:
-	Camera getCamera();
-	void setCamera( Camera& camera );
+	// Getters
+	const Camera& getCamera() const;
 
-	void clearMeshes();
-	void addMesh(const IMesh* mesh, const D3DXMATRIX& transformation, bool enabled = false);
-	void enableMesh(unsigned int index, bool enabled);
+	// Setters
+	void       setCamera( const Camera& camera );
+	void       setModel(Model* model);
+	void       applyAnimation(const Animation* animation);
+	Model*     getModel() const;
+	Animation* getAnimation() const;
+	void       enableMesh(unsigned int index, bool enabled);
 
-	bool render();
+	// Actions
+	bool render(unsigned int frame, const RENDERINFO& ri);
 	void reinitialize( HWND hWnd, int width, int height );
 
 	Engine(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager);

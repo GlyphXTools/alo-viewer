@@ -3,140 +3,72 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <set>
 
+#include "mesh.h"
 #include "model.h"
-#include "types.h"
+#include "chunks.h"
 #include "exceptions.h"
 
 using namespace std;
 
-Mesh::Mesh()
+class Model::ModelImpl
 {
-	hasEffect  = false;
-	nTriangles = ULONG_MAX;
-	nVertices  = ULONG_MAX;
-	vertices   = NULL;
-	indices    = NULL;
-}
+	friend class Model;
 
-Mesh::~Mesh()
-{
-	delete[] vertices;
-	delete[] indices;
-}
+	unsigned long                   nLights;
+	vector<Mesh*>                   meshes;
+	map<string,size_t>              meshMap;
+	vector<Bone>                    bones;
+	map<string,size_t>              boneMap;
+	map<unsigned int, unsigned int> connections;
 
-// This represents a Chunk
-class Chunk : public streambuf
-{
-    uint32_t type;
-	uint32_t size;
-	unsigned long start;
+	void readModel(File* input);
+	void readBones(File* input);
+	void readBone(Bone& bone, File* input);
+	void readMesh(Mesh& mesh, File* input);
+	void readVertexBuffer(Mesh& mesh, File* input);
+	void readEffectInfo(Effect& effect, File* input);
+	void readEffectParameter(Parameter& param, File* input);
+	void readConnections(File* input);
+	void readConnectionsInfo(unsigned long& nConnections, unsigned long& nAttachments, File* input);
+	void readConnection(unsigned long& mesh, unsigned long& bone, File* input);
 
-	File* stream;
-
-public:
-	bool isGroup() const           { return (size & 0x80000000) != 0; }
-	unsigned long getSize() const  { return size & 0x7FFFFFFF; }
-	unsigned long getType() const  { return type; }
-	unsigned long getStart() const { return start; }
-
-	char* getData()
-	{
-		char* data = new char[getSize()];
-		stream->seek(0);
-		if (stream->read(data, getSize()) != getSize())
-		{
-			delete[] data;
-			throw IOException("Unable to read chunk data");
-		}
-		return data;
-	}
-
-	File* getStream()
-	{
-		return stream;
-	}
-
-	Chunk(File* input)
-	{
-		if (input->read( (char*)&type, sizeof type) != sizeof type ||
-			input->read( (char*)&size, sizeof size) != sizeof size)
-		{
-			throw IOException("Unable to read chunk header");
-		}
-		type   = letohl(type);
-		size   = letohl(size);
-		start  = input->tell();
-		stream = new SubFile(input, start, getSize());
-	}
-
-	~Chunk()
-	{
-		stream->release();
-	}
+	ModelImpl(File* file);
+	~ModelImpl();
 };
 
-int Model::getConnection(unsigned int mesh) const
+#pragma pack(1)
+struct Node
 {
-	map<unsigned int, unsigned int>::const_iterator p = connections.find(mesh);
-	return (p == connections.end()) ? -1 : p->second;
-}
+	unsigned char x1, y1, z1;
+	unsigned char x2, y2, z2;
+	unsigned short type;
+	unsigned short link;
+};
+#pragma pack()
 
-const Mesh* Model::getMesh(string name) const
+static bool checkNode(const Node* nodes, int node, set<int>& visited)
 {
-	transform(name.begin(), name.end(), name.begin(), toupper);
-	map<string,size_t>::const_iterator p = meshMap.find(name);
-	return (p == meshMap.end()) ? NULL : meshes[p->second];
-}
-
-const Mesh* Model::getMesh(unsigned int index) const
-{
-	return meshes[index];
-}
-
-const Bone* Model::getBone(string name) const
-{
-	transform(name.begin(), name.end(), name.begin(), toupper);
-	map<string,int>::const_iterator p = boneMap.find(name);
-	return (p == boneMap.end()) ? NULL : getBone(p->second);
-}
-
-const Bone* Model::getBone(int bone) const
-{
-	return &bones[bone];
-}
-
-bool Model::getTransformation(string name, D3DXMATRIX& matrix) const
-{
-	transform(name.begin(), name.end(), name.begin(), toupper);
-	map<string,int>::const_iterator p = boneMap.find(name);
-	return (p == boneMap.end()) ? false : getTransformation(p->second, matrix);
-}
-
-bool Model::getTransformation(int mesh, D3DXMATRIX& matrix ) const
-{
-	D3DXMATRIX tmp;
-	D3DXMatrixIdentity( &tmp );
-
-	int bone = getConnection(mesh);
-	while (bone != -1)
+	for (unsigned short i = 0; i < nodes[node].type; i++)
 	{
-		matrix = tmp;
-		D3DXMatrixMultiply( &tmp, &bones[bone].matrix, &matrix );
-		bone = bones[bone].parent;
+		if (visited.insert(nodes[node].link + i).second == false) return false;
 	}
 
-	D3DXMatrixTranspose(&matrix, &tmp);
+	if (nodes[node].type == 0)
+	{
+		if (!checkNode(nodes, nodes[node].link + 0, visited )) return false;
+		if (!checkNode(nodes, nodes[node].link + 1, visited )) return false;
+	}
 	return true;
 }
 
-//
-// Reads vertex information from a Chunk with type 0x10000
-//
-void Model::readVertexBuffer(Mesh* mesh, File* input)
+static void readCollisionTree(Mesh& mesh, File* input)
 {
-	unsigned long vert_num = ULONG_MAX;
-	unsigned long indx_num = ULONG_MAX;
+	unsigned long nNodes = 0;
+	unsigned long nTrans = 0;
+
+	mesh.setCollisionTree();
 
 	while (!input->eof())
 	{
@@ -145,8 +77,61 @@ void Model::readVertexBuffer(Mesh* mesh, File* input)
 
 		switch (chunk.getType())
 		{
+			case 0x1201:
+			{
+				MiniChunks chunks(chunk);
+				unsigned char len1, len2;
+				const char* data1 = chunks.getChunk(0x02, len1);
+				const char* data2 = chunks.getChunk(0x03, len2);
+				if (len1 != 4 || len2 != 4)
+				{
+					throw BadFileException(input->getName());
+				}
+				nNodes = letohl( *(uint32_t*)data1 );
+				nTrans = letohl( *(uint32_t*)data2 );
+				break;
+			}
+
+			case 0x1202:
+				break;
+
+			case 0x1203:
+				break;
+
+			default:
+				throw BadFileException(input->getName());
+				break;
+		}
+		input->seek(chunk.getStart() + chunk.getSize());
+	}
+}
+
+//
+// Reads vertex information from a Chunk with type 0x10000
+//
+void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
+{
+	unsigned long vertnum = 0;
+	unsigned long primnum = 0;
+	Vertex*       vbuffer = NULL;
+	uint16_t*     ibuffer = NULL;
+	string        format;
+
+	while (!input->eof())
+	{
+		Chunk chunk(input);
+		File* stream = chunk.getStream();
+
+		switch (chunk.getType())
+		{
+			case 0x1200:
+				// Collision kd-tree
+				readCollisionTree(mesh, stream);
+				break;
+
 			case 0x10001:
 			{
+				// Mesh data chunk information
 				uint32_t verts;
 				uint32_t prims;
 				if (stream->read( (char*)&verts, sizeof verts) != sizeof verts ||
@@ -154,11 +139,8 @@ void Model::readVertexBuffer(Mesh* mesh, File* input)
 				{
 					throw IOException("Unable to read chunk data");
 				}
-				mesh->nVertices  = letohl(verts);
-				mesh->nTriangles = letohl(prims);
-
-				// Skip the rest of the Chunk
-				input->seek(input->tell() + chunk.getSize() - sizeof verts - sizeof prims);
+				vertnum = letohl(verts);
+				primnum = letohl(prims);
 				break;
 			}
 
@@ -166,26 +148,117 @@ void Model::readVertexBuffer(Mesh* mesh, File* input)
 			{
 				// Vertex format identifier
 				char* str = chunk.getData();
-				mesh->vertexFormat = str;
+				format = str;
 				delete[] str;
 				break;
 			}
 
 			case 0x10004:
-				indx_num = chunk.getSize() / sizeof(uint16_t);
-				mesh->indices = (uint16_t*)chunk.getData();
+				// Index buffer
+				delete[] ibuffer;
+				if (3 * primnum != chunk.getSize() / sizeof(uint16_t))
+				{
+					delete[] vbuffer;
+					throw BadFileException(input->getName());
+				}
+				ibuffer = (uint16_t*)chunk.getData();
 				break;
 
 			case 0x10007:
-				vert_num = chunk.getSize() / sizeof(Vertex);
-				mesh->vertices = (Vertex*)chunk.getData();
+				// Vertex buffer
+				delete[] vbuffer;
+				if (vertnum != chunk.getSize() / sizeof(Vertex))
+				{
+					delete[] ibuffer;
+					throw BadFileException(input->getName());
+				}
+				vbuffer = (Vertex*)chunk.getData();
+				break;
+
+			case 0x10005:
+				// TODO: implement this as soon as we figure out what the hell it is
+				break;
+
+			case 0x10006:
+			{
+				// Bone to skin-array mapping
+				const unsigned long* data = (const unsigned long*)chunk.getData();
+				unsigned long size = chunk.getSize() / 4;
+				for (unsigned long i = 0; i < size; i++)
+				{
+					mesh.addBoneMapping(data[i]);
+				}
+				delete[] data;
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
 				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
 	}
 
-	// Sanity check; if buffer sizes are at least the indicates sizes
-	if (vert_num < mesh->nVertices || indx_num < 3 * mesh->nTriangles)
+	if (vbuffer != NULL && ibuffer != NULL && format != "")
+	{
+		mesh.setVertexData(vbuffer, ibuffer, vertnum, primnum, format);
+	}
+}
+
+//
+// Parses mini-chunks into an effect parameter
+//
+void Model::ModelImpl::readEffectParameter(Parameter& param, File* input)
+{
+	int valid = 0;
+
+	while (!input->eof())
+	{
+		MiniChunk chunk(input);
+		File*     stream = chunk.getStream();
+
+		switch (chunk.getType())
+		{
+			case 1:
+			{
+				char* data = chunk.getData();
+				param.name = data;
+				delete[] data;
+				valid |= 1;
+				break;
+			}
+
+			case 2:
+			{
+				int len = chunk.getSize();
+				if ((param.type == Parameter::FLOAT  && len !=     sizeof(float)) ||
+					(param.type == Parameter::FLOAT4 && len != 4 * sizeof(float)) ||
+					(param.type == Parameter::FLOAT3 && len != 3 * sizeof(float)))
+				{
+					throw BadFileException(input->getName());
+				}
+
+				char* data = chunk.getData();
+				switch (param.type)
+				{
+					case Parameter::FLOAT:   memcpy(&param.m_float,  data, len); break;
+					case Parameter::FLOAT3:  memcpy(&param.m_float3, data, len); break;
+					case Parameter::FLOAT4:  memcpy(&param.m_float4, data, len); break;
+					case Parameter::TEXTURE: param.m_texture = data; break;
+				}
+				delete[] data;
+				valid |= 2;
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
+		}
+		input->seek(chunk.getStart() + chunk.getSize());
+	}
+
+	if (valid != 3)
 	{
 		throw BadFileException(input->getName());
 	}
@@ -194,7 +267,7 @@ void Model::readVertexBuffer(Mesh* mesh, File* input)
 //
 // Reads effect information from a Chunk with type 0x10100
 //
-void Model::readEffectInfo(Effect& effect, File* input)
+void Model::ModelImpl::readEffectInfo(Effect& effect, File* input)
 {
 	while (!input->eof())
 	{
@@ -205,6 +278,7 @@ void Model::readEffectInfo(Effect& effect, File* input)
 		{
 			case 1:
 			{
+				// Effect name
 				char* str = chunk.getData();
 				effect.name = str;
 				delete[] str;
@@ -213,53 +287,47 @@ void Model::readEffectInfo(Effect& effect, File* input)
 
 			case 3:
 			{
+				// Effect parameter: FLOAT
 				Parameter param;
-				char* data = chunk.getData();
-				int len1 = data[1];
-				int len2 = data[3 + len1];
-				if (len2 != sizeof(float))
-				{
-					throw BadFileException(input->getName());
-				}
-				param.name = &data[2];
 				param.type = Parameter::FLOAT;
-				memcpy( &param.m_float, &data[4 + len1], sizeof(float));
-				delete[] data;
+				readEffectParameter( param, stream );
+				effect.parameters.push_back(param);
+				break;
+			}
+
+			case 4:
+			{
+				// Effect parameter: FLOAT3
+				Parameter param;
+				param.type = Parameter::FLOAT3;
+				readEffectParameter( param, stream );
 				effect.parameters.push_back(param);
 				break;
 			}
 
 			case 5:
 			{
+				// Effect parameter: TEXTURE
 				Parameter param;
-				char* data = chunk.getData();
-				int len1 = data[1];
-				int len2 = data[3 + len1];
-				param.name = &data[2];
 				param.type = Parameter::TEXTURE;
-				param.m_texture = &data[4 + len1];
-				delete[] data;
+				readEffectParameter( param, stream );
 				effect.parameters.push_back(param);
 				break;
 			}
 
 			case 6:
 			{
+				// Effect parameter: FLOAT4
 				Parameter param;
-				char* data = chunk.getData();
-				int len1 = data[1];
-				int len2 = data[3 + len1];
-				if (len2 != 4 * sizeof(float))
-				{
-					throw BadFileException(input->getName());
-				}
-				param.name = &data[2];
 				param.type = Parameter::FLOAT4;
-				memcpy( &param.m_float4, &data[4 + len1], len2 );
-				delete[] data;
+				readEffectParameter( param, stream );
 				effect.parameters.push_back(param);
 				break;
 			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
 	}
@@ -268,64 +336,64 @@ void Model::readEffectInfo(Effect& effect, File* input)
 //
 // Reads a mesh from a Chunk with type 0x0400
 //
-void Model::readMesh(File* input)
+void Model::ModelImpl::readMesh(Mesh& mesh, File* input)
 {
-	Mesh* mesh = new Mesh();
-	try
+	while (!input->eof())
 	{
-		mesh->index = (int)meshes.size();
-		string name;
+		Chunk chunk(input);
+		File* stream = chunk.getStream();
 
-		while (!input->eof())
+		switch (chunk.getType())
 		{
-			Chunk chunk(input);
-			File* stream = chunk.getStream();
-
-			switch (chunk.getType())
+			case 0x00401:
 			{
-				case 0x00401:
-				{
-					// Mesh identifier string
-					char* str = chunk.getData();
-					name = str;
-					delete[] str;
-					break;
-				}
-
-				case 0x10000:
-					// Mesh vertex and index buffer
-					readVertexBuffer(mesh, stream);
-					break;
-
-				case 0x10100:
-					// Effect info
-					readEffectInfo(mesh->effect, stream);
-					mesh->hasEffect = true;
-					break;
+				// Mesh identifier string
+				char* str = chunk.getData();
+				mesh.setName(str);
+				delete[] str;
+				break;
 			}
-			input->seek(chunk.getStart() + chunk.getSize());
-		}
 
-		if (name != "")
-		{
-			mesh->name = name;
-			transform(name.begin(), name.end(), name.begin(), toupper);
-			meshMap.insert( make_pair(name, meshes.size()) );
+			case 0x00402:
+			{
+				// Mesh metadata
+				if (chunk.getSize() < 40)
+				{
+					throw BadFileException(input->getName());
+				}
+				char* data = chunk.getData();
+				mesh.setBoundingBox(
+					D3DXVECTOR3(*(float*)&data[ 4], *(float*)&data[ 8], *(float*)&data[12]),
+					D3DXVECTOR3(*(float*)&data[16], *(float*)&data[20], *(float*)&data[24]) );
+				delete[] data;
+				break;
+			}
+
+			case 0x10000:
+				// Mesh vertex and index buffer
+				readVertexBuffer(mesh, stream);
+				break;
+
+			case 0x10100:
+			{
+				// Effect info
+				Effect effect;
+				readEffectInfo(effect, stream);
+				mesh.addEffect(effect);
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
 		}
-		meshes.push_back(mesh);
-	}
-	catch (...)
-	{
-		delete mesh;
-		throw;
+		input->seek(chunk.getStart() + chunk.getSize());
 	}
 }
 
-void Model::readBone(File* input)
+void Model::ModelImpl::readBone(Bone& bone, File* input)
 {
-	Bone   bone;
-	string name;
-	int    valid = 0;
+	int valid = 0;
 
 	while (!input->eof())
 	{
@@ -338,18 +406,35 @@ void Model::readBone(File* input)
 			{
 				// Bone identifier string
 				char* str = chunk.getData();
-				name = str;
-				transform(name.begin(), name.end(), name.begin(), toupper);
+				bone.name = str;
 				delete[] str;
 				valid |= 1;
 				break;
 			}
 
+			case 0x0205:
+			{
+				// Bone offset matrix
+				if (chunk.getSize() < 56)
+				{
+					throw BadFileException(input->getName());
+				}
+				char* data = chunk.getData();
+				bone.parent = letohl(*(uint32_t*)&data[0]);
+				memset(&bone.matrix, 0, sizeof(D3DXMATRIX));
+				memcpy(&bone.matrix, data + 8, chunk.getSize() - 8);
+				bone.matrix[15] = 1.0f;
+				D3DXMatrixTranspose(&bone.matrix, &bone.matrix);
+
+				delete[] data;
+				valid |= 2;
+				break;
+			}
+
 			case 0x0206:
 			{
-				// The stored matrix appears to be a 4x3 matrix, so in order
-				// to create a 4x4 Direct3D matrix, we must padd and transpose
-				if (chunk.getSize() < 12)
+				// Bone offset matrix
+				if (chunk.getSize() < 60)
 				{
 					throw BadFileException(input->getName());
 				}
@@ -358,25 +443,29 @@ void Model::readBone(File* input)
 				memset(&bone.matrix, 0, sizeof(D3DXMATRIX));
 				memcpy(&bone.matrix, data + 12, chunk.getSize() - 12);
 				bone.matrix[15] = 1.0f;
+				D3DXMatrixTranspose(&bone.matrix, &bone.matrix);
+
 				delete[] data;
 				valid |= 2;
 				break;
 			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
 	}
 
-	if (valid == 3)
+	if (valid != 3)
 	{
-		int index = (int)bones.size();
-		bones.push_back(bone);
-		boneMap.insert(make_pair(name, index));
+		throw BadFileException(input->getName());
 	}
 }
 
-void Model::readBones(File* input)
+void Model::ModelImpl::readBones(File* input)
 {
-	unsigned long nBones;
+	int nBones = 0;
 
 	while (!input->eof())
 	{
@@ -398,17 +487,135 @@ void Model::readBones(File* input)
 			}
 
 			case 0x0202:
+			{
 				// Bone
-				readBone(stream);
+				Bone bone;
+				readBone(bone, stream);
+				if (bone.parent != -1 && (bone.parent < 0 || (unsigned int)bone.parent >= bones.size()))
+				{
+					throw BadFileException(input->getName());
+				}
+				string name = bone.name;
+				transform(name.begin(), name.end(), name.begin(), toupper);
+				boneMap.insert(make_pair(name, bones.size()));
+				bones.push_back(bone);
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
 				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize() );
 	}
+
+	// Validate
+	if (bones.size() != nBones)
+	{
+		throw BadFileException(input->getName());
+	}
 }
 
-void Model::readConnections(File* input)
+void Model::ModelImpl::readConnectionsInfo(unsigned long& nConnections, unsigned long& nAttachments, File* input)
+{
+	int valid = 0;
+
+	while (!input->eof())
+	{
+		MiniChunk chunk(input);
+		File*     stream = chunk.getStream();
+
+		switch (chunk.getType())
+		{
+			case 1:
+			{
+				uint32_t conns;
+				if (stream->read(&conns, sizeof(conns)) != sizeof(conns))
+				{
+					throw BadFileException(input->getName());
+				}
+				nConnections = letohl(conns);
+				valid |= 1;
+				break;
+			}
+
+			case 4:
+			{
+				uint32_t attachs;
+				if (stream->read(&attachs, sizeof(attachs)) != sizeof(attachs))
+				{
+					throw BadFileException(input->getName());
+				}
+				nAttachments = letohl(attachs);
+				valid |= 2;
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
+		}
+		input->seek( chunk.getStart() + chunk.getSize() );
+	}
+
+	if (valid != 3)
+	{
+		throw BadFileException(input->getName());
+	}
+}
+
+void Model::ModelImpl::readConnection(unsigned long& mesh, unsigned long& bone, File* input)
+{
+	int valid = 0;
+
+	while (!input->eof())
+	{
+		MiniChunk chunk(input);
+		File*     stream = chunk.getStream();
+
+		switch (chunk.getType())
+		{
+			case 2:
+			{
+				uint32_t _mesh;
+				if (stream->read(&_mesh, sizeof(_mesh)) != sizeof(_mesh))
+				{
+					throw BadFileException(input->getName());
+				}
+				mesh = letohl(_mesh);
+				valid |= 1;
+				break;
+			}
+
+			case 3:
+			{
+				uint32_t _bone;
+				if (stream->read(&_bone, sizeof(_bone)) != sizeof(_bone))
+				{
+					throw BadFileException(input->getName());
+				}
+				bone = letohl(_bone);
+				valid |= 2;
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
+		}
+		input->seek( chunk.getStart() + chunk.getSize() );
+	}
+
+	if (valid != 3)
+	{
+		throw BadFileException(input->getName());
+	}
+}
+
+void Model::ModelImpl::readConnections(File* input)
 {
 	unsigned long nConnections = 0;
+	unsigned long nAttachments = 0;
 
 	while (!input->eof())
 	{
@@ -418,51 +625,27 @@ void Model::readConnections(File* input)
 		switch (chunk.getType())
 		{
 			case 0x0601:
-			{
-				if (chunk.getSize() < 12)
-				{
-					throw BadFileException(input->getName());
-				}
-				char* data = chunk.getData();
-				char *type1 = &data[0];
-				int   len1  =  data[1];
-				char *type2 = &data[2 + len1];
-				int   len2  =  data[3 + len1];
-				if (len1 != 4 || len2 != 4 || *type1 != 1 || *type2 != 4)
-				{
-					throw BadFileException(input->getName());
-				}
-				uint32_t* conns = (uint32_t*)&data[2];
-				uint32_t* root  = (uint32_t*)&data[8];
-
-				nConnections = letohl(*conns);
-				rootBone     = letohl(*root);
-				delete[] data;
+				readConnectionsInfo(nConnections, nAttachments, stream);
 				break;
-			}
 
 			case 0x0602:
 			{
-				if (chunk.getSize() < 12)
-				{
-					throw BadFileException(input->getName());
-				}
-				char* data = chunk.getData();
-				char *type1 = &data[0];
-				int   len1  =  data[1];
-				char *type2 = &data[2 + len1];
-				int   len2  =  data[3 + len1];
-				if (len1 != 4 || len2 != 4 || *type1 != 2 || *type2 != 3)
-				{
-					throw BadFileException(input->getName());
-				}
-				uint32_t* mesh = (uint32_t*)&data[2];
-				uint32_t* bone = (uint32_t*)&data[8];
-
-				connections.insert(make_pair(letohl(*mesh), letohl(*bone)));
-				delete[] data;
+				unsigned long mesh, bone;
+				readConnection(mesh, bone, stream);
+				connections.insert(make_pair(mesh, bone));
 				break;
 			}
+
+			case 0x0603:
+			{
+				// TODO: implement this, as soon as we figure out what the hell it is
+				// Maybe damage connections?
+				break;
+			}
+
+			default:
+				throw BadFileException(input->getName());
+				break;
 		}
 		input->seek( chunk.getStart() + chunk.getSize() );
 	}
@@ -473,8 +656,10 @@ void Model::readConnections(File* input)
 	}
 }
 
-void Model::readModel(File* input)
+void Model::ModelImpl::readModel(File* input)
 {
+	nLights = 0;
+
 	while (!input->eof())
 	{
 		Chunk chunk(input);
@@ -487,26 +672,128 @@ void Model::readModel(File* input)
 				break;
 
 			case 0x0400:
-				readMesh(stream);
+			{
+				Mesh* mesh = new Mesh;
+				try
+				{
+					readMesh(*mesh, stream);
+					if (mesh->getName() != "")
+					{
+						string name = mesh->getName();
+						transform(name.begin(), name.end(), name.begin(), toupper);
+						meshMap.insert( make_pair(name, meshes.size()) );
+						meshes.push_back(mesh);
+					}
+				}
+				catch (...)
+				{
+					delete mesh;
+					throw;
+				}
 				break;
+			}
 
 			case 0x0600:
 				readConnections(stream);
+				break;
+
+			case 0x900:
+				// TODO: implement this as soon as we figure out what the hell it is
+				// Seems to be a particle, from P_XXXXX files. Irrelevant to models.
+				break;
+
+			case 0x1300:
+				// TODO: implement this as soon as we figure out what the hell it is
+				// Seems to be a light source
+				// Ignore it for now, but count it as part of the connectables
+				nLights++;
+				break;
+
+			default:
+				throw BadFileException(input->getName());
 				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
 	}
 }
 
-Model::Model(File* file)
+Model::ModelImpl::ModelImpl(File* file)
 {
 	readModel(file);
 }
 
-Model::~Model()
+Model::ModelImpl::~ModelImpl()
 {
 	for (vector<Mesh*>::iterator i = meshes.begin(); i != meshes.end(); i++)
 	{
 		delete *i;
 	}
+}
+
+//
+// Public Model functions
+//
+int Model::getConnection(unsigned int mesh) const
+{
+	map<unsigned int, unsigned int>::const_iterator p = pimpl->connections.find(mesh + pimpl->nLights);
+	return (p == pimpl->connections.end()) ? -1 : p->second;
+}
+
+const Mesh* Model::getMesh(string name) const
+{
+	transform(name.begin(), name.end(), name.begin(), toupper);
+	map<string,size_t>::const_iterator p = pimpl->meshMap.find(name);
+	return (p == pimpl->meshMap.end()) ? NULL : pimpl->meshes[p->second];
+}
+
+unsigned int Model::getNumMeshes() const { return (unsigned int)pimpl->meshes.size(); }
+unsigned int Model::getNumBones()  const { return (unsigned int)pimpl->bones.size();  }
+
+const Mesh* Model::getMesh(unsigned int index) const
+{
+	return pimpl->meshes[index];
+}
+
+const Bone* Model::getBone(string name) const
+{
+	transform(name.begin(), name.end(), name.begin(), toupper);
+	map<string,size_t>::const_iterator p = pimpl->boneMap.find(name);
+	return (p == pimpl->boneMap.end()) ? NULL : &pimpl->bones[p->second];
+}
+
+const Bone* Model::getBone(int bone) const
+{
+	return &pimpl->bones[bone];
+}
+
+bool Model::getTransformation(string name, D3DXMATRIX& matrix) const
+{
+	transform(name.begin(), name.end(), name.begin(), toupper);
+	map<string,size_t>::const_iterator p = pimpl->boneMap.find(name);
+	return (p == pimpl->boneMap.end()) ? false : getTransformation( (int)p->second, matrix);
+}
+
+bool Model::getTransformation(int mesh, D3DXMATRIX& matrix ) const
+{
+	return getBoneTransformation( getConnection(mesh), matrix );
+}
+
+bool Model::getBoneTransformation(int bone, D3DXMATRIX& matrix ) const
+{
+	D3DXMatrixIdentity( &matrix );
+	while (bone != -1)
+	{
+		D3DXMatrixMultiply( &matrix, &matrix, &pimpl->bones[bone].matrix );
+		bone = pimpl->bones[bone].parent;
+	}
+	return true;
+}
+
+Model::Model(File* file) : pimpl(new ModelImpl(file))
+{
+}
+
+Model::~Model()
+{
+	delete pimpl;
 }
