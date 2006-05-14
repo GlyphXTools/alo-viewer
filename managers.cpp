@@ -1,0 +1,373 @@
+#include <algorithm>
+#include <iostream>
+#include "managers.h"
+#include "exceptions.h"
+#include "crc32.h"
+#include "xml.h"
+using namespace std;
+
+//
+// File class
+//
+File::File(const std::string& name)
+{
+	this->refcount = 1;
+	this->name     = name;
+}
+
+void File::addRef()
+{
+	refcount++;
+}
+
+void File::release()
+{
+	if (--refcount == 0)
+	{
+		delete this;
+	}
+}
+
+//
+// PhysicalFile class
+//
+bool PhysicalFile::eof()
+{
+	return offset == getSize();
+}
+
+unsigned long PhysicalFile::getSize()
+{
+	return GetFileSize(handle->hFile, NULL);
+}
+
+void PhysicalFile::seek(unsigned long offset)
+{
+	this->offset = min(offset, getSize());
+}
+
+unsigned long PhysicalFile::tell()
+{
+	return offset;
+}
+
+unsigned long PhysicalFile::read( void* buffer, unsigned long count )
+{
+	DWORD read;
+	SetFilePointer( handle->hFile, offset, NULL, FILE_BEGIN );
+	if (!ReadFile(handle->hFile, buffer, count, &read, NULL))
+	{
+		read = 0;
+	}
+	offset += read;
+	return read;
+}
+
+PhysicalFile::PhysicalFile(PhysicalFile& file) : File(file.getName())
+{
+	handle = file.handle;
+	handle->refcount++;
+}
+
+PhysicalFile::PhysicalFile(const string& filename) : File(filename)
+{
+	offset = 0;
+	handle = new Handle;
+
+	handle->refcount = 1;
+	handle->hFile    = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (handle->hFile == INVALID_HANDLE_VALUE)
+	{
+		DWORD error = GetLastError();
+		delete handle;
+		if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
+		{
+			throw FileNotFoundException(filename);
+		}
+		throw IOException("Unable to open file" + filename);
+	}
+}
+
+PhysicalFile::~PhysicalFile()
+{
+	if (--handle->refcount == 0)
+	{
+		CloseHandle(handle->hFile);
+		delete handle;
+	}
+}
+
+//
+// SubFile class
+//
+bool SubFile::eof()
+{
+	return offset == getSize();
+}
+
+unsigned long SubFile::getSize()
+{
+	return size;
+}
+
+void SubFile::seek(unsigned long offset)
+{
+	this->offset = min(offset, getSize());
+}
+
+unsigned long SubFile::tell()
+{
+	return offset;
+}
+
+unsigned long SubFile::read( void* buffer, unsigned long count )
+{
+	count = min(count, size);
+	file->seek( start + offset );
+	count = file->read(buffer, count);
+	offset += count;
+	return count;
+}
+
+SubFile::SubFile(File* file, unsigned long start, unsigned long size) : File(file->getName())
+{
+	this->file   = file;
+	this->offset = 0;
+	this->start  = start;
+	this->size   = size;
+	file->addRef();
+}
+
+SubFile::~SubFile()
+{
+	file->release();
+}
+
+//
+// MegaFile class
+//
+MegaFile::MegaFile(File* file)
+{
+	this->file = file;
+	this->file->addRef();
+
+	try
+	{
+		//
+		// Read sizes
+		//
+		uint32_t numStrings;
+		uint32_t numFiles;
+		if (file->read((void*)&numStrings, sizeof(uint32_t)) != sizeof(uint32_t) ||
+			file->read((void*)&numFiles,   sizeof(uint32_t)) != sizeof(uint32_t))
+		{
+			throw IOException("Unable to read file header");
+		}
+
+		//
+		// Read filenames
+		//
+		for (unsigned long i = 0; i < numStrings; i++)
+		{
+			uint16_t length;
+			if (file->read( (void*)&length, sizeof(uint16_t) ) != sizeof(uint16_t))
+			{
+				throw IOException("Unable to read string table");
+			}
+
+			char* data = new char[length + 1];
+			if (file->read(data, length) != length)
+			{
+				delete[] data;
+				throw IOException("Unable to read string table");
+			}
+			data[length] = '\0';
+			filenames.push_back( data );
+			delete[] data;
+		}
+
+		//
+		// Read master index table
+		//
+		unsigned long start     = file->tell() + numFiles * sizeof(FileInfo);
+		unsigned long totalsize = file->getSize() - start;
+
+		for (unsigned long i = 0; i < numFiles; i++)
+		{
+			FileInfo info;
+			if (file->read( (void*)&info, sizeof(FileInfo) ) != sizeof(FileInfo))
+			{
+				throw IOException("Unable to read file table");
+			}
+			files.push_back(info);
+		}
+	}
+	catch (IOException&)
+	{
+		throw BadFileException( file->getName() );
+	}
+}
+
+MegaFile::~MegaFile()
+{
+	file->release();
+}
+
+File* MegaFile::getFile(std::string path) const
+{
+	try
+	{
+		transform(path.begin(), path.end(), path.begin(), toupper);
+		unsigned long crc = crc32( path.c_str(), path.size() );
+
+		// Do a binary search
+		int last = (int)files.size() - 1;
+		int low  = 0, high = last;
+		while (high >= low)
+		{
+			int mid = (low + high) / 2;
+			if (files[mid].crc == crc)
+			{
+				// Found a match; find all adjacent matches
+				high = low = mid;
+				while (low  > 0 && files[low-1].crc == crc) low--;
+				while (high < last && files[high+1].crc == crc) high++;
+				if (low == high)
+				{
+					mid = low;
+				}
+				else for (mid = low; mid <= high; mid++)
+				{
+					if (filenames[ files[mid].nameIndex ] == path)
+					{
+						break;
+					}
+				}
+				return new SubFile(file, files[mid].start, files[mid].size );
+			}
+			if (crc < files[mid].crc) high = mid - 1;
+			else                      low  = mid + 1;
+		}
+	}
+	catch (IOException&)
+	{
+		throw BadFileException( file->getName() );
+	}
+	return NULL;
+}
+
+File* MegaFile::getFile(int index) const
+{
+	return new SubFile(file, files[index].start, files[index].size );
+}
+
+const string& MegaFile::getFilename(int index) const
+{
+	return filenames[ files[index].nameIndex ];
+}
+
+//
+// FileManager class
+//
+File* FileManager::getFile(string megafile, const string& path)
+{
+	File* file = NULL;
+	transform(megafile.begin(), megafile.end(), megafile.begin(), toupper);
+	map<string,MegaFile*>::iterator i = megafiles.find(megafile);
+	if (i != megafiles.end())
+	{
+		file = i->second->getFile( path );
+	}
+
+	return NULL;
+}
+
+File* FileManager::getFile(const string& path)
+{
+	// First see if we can open it physically
+	try
+	{
+		string filename = (path[1] != ':' && path[0] != '\\') ? basepath + path : path;
+		return new PhysicalFile(filename);
+	}
+	catch (IOException&)
+	{
+	}
+
+	// Search in the index
+	try
+	{
+		for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+		{
+			File* file = i->second->getFile( path );
+			if (file != NULL)
+			{
+				return file;
+			}
+		}
+	}
+	catch (IOException&)
+	{
+	}
+
+	return NULL;
+}
+
+FileManager::FileManager(const string& basepath)
+{
+	XMLTree xml;
+	this->basepath = basepath;
+	string filename = basepath + "Data\\MegaFiles.xml";
+	File* file = new PhysicalFile( filename );
+	xml.parse( file );
+	file->release();
+
+	const XMLNode* root = xml.getRoot();
+	if (root->getName() != "Mega_Files")
+	{
+		throw BadFileException( filename );
+	}
+
+	try
+	{
+		// Create a file index from all mega files
+		for (unsigned int i = 0; i < root->getNumChildren(); i++)
+		{
+			const XMLNode* child = root->getChild(i);
+			if (child->getName() != "File")
+			{
+				throw BadFileException( filename );
+			}
+	
+			MegaFile* megafile;
+			string filename = basepath + child->getData();
+			try
+			{
+				megafile = new MegaFile(new PhysicalFile(filename));
+			}
+			catch (IOException)
+			{
+				continue;
+			}
+			transform(filename.begin(), filename.end(), filename.begin(), toupper);
+			megafiles.insert(make_pair(filename, megafile));
+		}
+	}
+	catch (...)
+	{
+		for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+		{
+			delete i->second;
+		}
+		throw;
+	}
+}
+
+FileManager::~FileManager()
+{
+	for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+	{
+		delete i->second;
+	}
+}
+
