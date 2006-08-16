@@ -26,27 +26,29 @@ const int8_t	INT8_MIN  = -128;
 const int16_t	INT16_MIN = -32768;
 const int32_t	INT32_MIN = 0x80000000;
 const int64_t	INT64_MIN = 0x8000000000000000;
+#define TLS_ATTR __declspec(thread)
 #else
+#define TLS_ATTR
 #include <stdint.h>
 #endif
 
 inline uint64_t letohll(uint64_t value)
 {
-	return (((uint8_t*)&value)[7] << 56) | (((uint8_t*)&value)[6] << 48) |
-	       (((uint8_t*)&value)[5] << 40) | (((uint8_t*)&value)[4] << 32) |
-	       (((uint8_t*)&value)[3] << 24) | (((uint8_t*)&value)[2] << 16) |
-	       (((uint8_t*)&value)[1] <<  8) | (((uint8_t*)&value)[0] <<  0);
+	return (((uint64_t)((uint8_t*)&value)[7]) << 56) | (((uint64_t)((uint8_t*)&value)[6]) << 48) |
+	       (((uint64_t)((uint8_t*)&value)[5]) << 40) | (((uint64_t)((uint8_t*)&value)[4]) << 32) |
+	       (((uint64_t)((uint8_t*)&value)[3]) << 24) | (((uint64_t)((uint8_t*)&value)[2]) << 16) |
+	       (((uint64_t)((uint8_t*)&value)[1]) <<  8) | (((uint64_t)((uint8_t*)&value)[0]) <<  0);
 }
 
 inline uint32_t letohl(uint32_t value)
 {
-	return (((uint8_t*)&value)[3] << 24) | (((uint8_t*)&value)[2] << 16)|
-	       (((uint8_t*)&value)[1] <<  8) | (((uint8_t*)&value)[0] <<  0);
+	return (((uint32_t)((uint8_t*)&value)[3]) << 24) | (((uint32_t)((uint8_t*)&value)[2]) << 16)|
+	       (((uint32_t)((uint8_t*)&value)[1]) <<  8) | (((uint32_t)((uint8_t*)&value)[0]) <<  0);
 }
 
 inline uint16_t letohs(uint16_t value)
 {
-	return (((uint8_t*)&value)[1] << 8) | (((uint8_t*)&value)[0] << 0);
+	return (((uint16_t)((uint8_t*)&value)[1]) << 8) | (((uint16_t)((uint8_t*)&value)[0]) << 0);
 }
 
 inline uint64_t htolell(uint64_t value)

@@ -18,11 +18,14 @@ struct ApplicationInfo
 {
 	HINSTANCE hInstance;
 
+	bool isMinimized;
+
 	HWND hColorsLabel;
 	HWND hColorBtn[NUM_COLORS + 1];
 	HWND hMainWnd;
 	HWND hBonesCheckbox;
 	HWND hNamesCheckbox;
+	HWND hWireframeCheckbox;
 	HWND hListBox;
 	HWND hRenderWnd;
 	HWND hTimeSlider;

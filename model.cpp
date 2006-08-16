@@ -27,7 +27,7 @@ class Model::ModelImpl
 	void readBones(File* input);
 	void readBone(Bone& bone, File* input);
 	void readMesh(Mesh& mesh, File* input);
-	void readVertexBuffer(Mesh& mesh, File* input);
+	void readMeshData(Material& material, File* input);
 	void readEffectInfo(Effect& effect, File* input);
 	void readEffectParameter(Parameter& param, File* input);
 	void readConnections(File* input);
@@ -63,12 +63,10 @@ static bool checkNode(const Node* nodes, int node, set<int>& visited)
 	return true;
 }
 
-static void readCollisionTree(Mesh& mesh, File* input)
+static void readCollisionTree(Material& material, File* input)
 {
 	unsigned long nNodes = 0;
 	unsigned long nTrans = 0;
-
-	mesh.setCollisionTree();
 
 	while (!input->eof())
 	{
@@ -104,18 +102,19 @@ static void readCollisionTree(Mesh& mesh, File* input)
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
 	}
+	material.hasCollisionTree = true;
 }
 
 //
 // Reads vertex information from a Chunk with type 0x10000
 //
-void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
+void Model::ModelImpl::readMeshData(Material& material, File* input)
 {
-	unsigned long vertnum = 0;
-	unsigned long primnum = 0;
-	Vertex*       vbuffer = NULL;
-	uint16_t*     ibuffer = NULL;
-	string        format;
+	material.nVertices  = 0;
+	material.nTriangles = 0;
+	material.vertices = NULL;
+	material.indices  = NULL;
+	material.hasCollisionTree = false;
 
 	while (!input->eof())
 	{
@@ -126,7 +125,7 @@ void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
 		{
 			case 0x1200:
 				// Collision kd-tree
-				readCollisionTree(mesh, stream);
+				readCollisionTree(material, stream);
 				break;
 
 			case 0x10001:
@@ -139,8 +138,8 @@ void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
 				{
 					throw IOException("Unable to read chunk data");
 				}
-				vertnum = letohl(verts);
-				primnum = letohl(prims);
+				material.nVertices  = letohl(verts);
+				material.nTriangles = letohl(prims);
 				break;
 			}
 
@@ -148,36 +147,52 @@ void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
 			{
 				// Vertex format identifier
 				char* str = chunk.getData();
-				format = str;
+				material.vertexFormat = str;
 				delete[] str;
 				break;
 			}
 
 			case 0x10004:
 				// Index buffer
-				delete[] ibuffer;
-				if (3 * primnum != chunk.getSize() / sizeof(uint16_t))
+				delete[] material.indices;
+				if (3 * material.nTriangles != chunk.getSize() / sizeof(uint16_t))
 				{
-					delete[] vbuffer;
+					delete[] material.vertices;
 					throw BadFileException(input->getName());
 				}
-				ibuffer = (uint16_t*)chunk.getData();
+				material.indices = (uint16_t*)chunk.getData();
 				break;
 
 			case 0x10007:
 				// Vertex buffer
-				delete[] vbuffer;
-				if (vertnum != chunk.getSize() / sizeof(Vertex))
+				delete[] material.vertices;
+				if (material.nVertices != chunk.getSize() / sizeof(Vertex))
 				{
-					delete[] ibuffer;
+					delete[] material.indices;
 					throw BadFileException(input->getName());
 				}
-				vbuffer = (Vertex*)chunk.getData();
+				material.vertices = (Vertex*)chunk.getData();
 				break;
 
 			case 0x10005:
-				// TODO: implement this as soon as we figure out what the hell it is
+			{
+				// Vertex buffer
+				delete[] material.vertices;
+				if (material.nVertices != chunk.getSize() / sizeof(Vertex2))
+				{
+					delete[] material.indices;
+					throw BadFileException(input->getName());
+				}
+				Vertex2* tmp = (Vertex2*)chunk.getData();
+				material.vertices = new Vertex[material.nVertices];
+				memset(material.vertices, 0, material.nVertices * sizeof(Vertex));
+				for (unsigned int i = 0; i < material.nVertices; i++)
+				{
+					memcpy(&material.vertices[i], &tmp[i], offsetof(Vertex2, filler1));
+				}
+				delete[] tmp;
 				break;
+			}
 
 			case 0x10006:
 			{
@@ -186,7 +201,7 @@ void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
 				unsigned long size = chunk.getSize() / 4;
 				for (unsigned long i = 0; i < size; i++)
 				{
-					mesh.addBoneMapping(data[i]);
+					material.boneMapping.push_back(data[i]);
 				}
 				delete[] data;
 				break;
@@ -197,11 +212,6 @@ void Model::ModelImpl::readVertexBuffer(Mesh& mesh, File* input)
 				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
-	}
-
-	if (vbuffer != NULL && ibuffer != NULL && format != "")
-	{
-		mesh.setVertexData(vbuffer, ibuffer, vertnum, primnum, format);
 	}
 }
 
@@ -231,7 +241,8 @@ void Model::ModelImpl::readEffectParameter(Parameter& param, File* input)
 			case 2:
 			{
 				int len = chunk.getSize();
-				if ((param.type == Parameter::FLOAT  && len !=     sizeof(float)) ||
+				if ((param.type == Parameter::INT    && len !=     sizeof(int32_t)) ||
+					(param.type == Parameter::FLOAT  && len !=     sizeof(float)) ||
 					(param.type == Parameter::FLOAT4 && len != 4 * sizeof(float)) ||
 					(param.type == Parameter::FLOAT3 && len != 3 * sizeof(float)))
 				{
@@ -241,6 +252,7 @@ void Model::ModelImpl::readEffectParameter(Parameter& param, File* input)
 				char* data = chunk.getData();
 				switch (param.type)
 				{
+					case Parameter::INT:     memcpy(&param.m_int,    data, len); break;
 					case Parameter::FLOAT:   memcpy(&param.m_float,  data, len); break;
 					case Parameter::FLOAT3:  memcpy(&param.m_float3, data, len); break;
 					case Parameter::FLOAT4:  memcpy(&param.m_float4, data, len); break;
@@ -282,6 +294,16 @@ void Model::ModelImpl::readEffectInfo(Effect& effect, File* input)
 				char* str = chunk.getData();
 				effect.name = str;
 				delete[] str;
+				break;
+			}
+
+			case 2:
+			{
+				// Effect parameter: INT
+				Parameter param;
+				param.type = Parameter::INT;
+				readEffectParameter( param, stream );
+				effect.parameters.push_back(param);
 				break;
 			}
 
@@ -338,6 +360,9 @@ void Model::ModelImpl::readEffectInfo(Effect& effect, File* input)
 //
 void Model::ModelImpl::readMesh(Mesh& mesh, File* input)
 {
+	unsigned long nMaterials = 0;
+	Material material;
+
 	while (!input->eof())
 	{
 		Chunk chunk(input);
@@ -362,6 +387,7 @@ void Model::ModelImpl::readMesh(Mesh& mesh, File* input)
 					throw BadFileException(input->getName());
 				}
 				char* data = chunk.getData();
+				nMaterials = letohl(*(uint32_t*)&data[0]);
 				mesh.setBoundingBox(
 					D3DXVECTOR3(*(float*)&data[ 4], *(float*)&data[ 8], *(float*)&data[12]),
 					D3DXVECTOR3(*(float*)&data[16], *(float*)&data[20], *(float*)&data[24]) );
@@ -371,17 +397,18 @@ void Model::ModelImpl::readMesh(Mesh& mesh, File* input)
 
 			case 0x10000:
 				// Mesh vertex and index buffer
-				readVertexBuffer(mesh, stream);
+				readMeshData(material, stream);
+				if (material.vertices != NULL && material.indices != NULL && material.vertexFormat != "" && material.effect.name != "")
+				{
+					mesh.addMaterial(material);
+				}
+				material = Material();
 				break;
 
 			case 0x10100:
-			{
 				// Effect info
-				Effect effect;
-				readEffectInfo(effect, stream);
-				mesh.addEffect(effect);
+				readEffectInfo(material.effect, stream);
 				break;
-			}
 
 			default:
 				throw BadFileException(input->getName());

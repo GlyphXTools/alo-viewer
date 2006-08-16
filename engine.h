@@ -12,6 +12,7 @@ struct Parameter
 {
 	enum Type
 	{
+		INT,
 		FLOAT,
 		FLOAT3,
 		FLOAT4,
@@ -22,6 +23,7 @@ struct Parameter
 	std::string name;			// Name of the parameter
 	Type        type;			// Type of the parameter
 
+	int32_t     m_int;			// Valid if type is INT
 	float       m_float;		// Valid if type is FLOAT
 	float		m_float3[3];	// Valid if type is FLOAT3
 	float		m_float4[4];	// Valid if type is FLOAT4
@@ -48,6 +50,14 @@ struct Vertex
 	DWORD       BoneIndices[4];		// 112	70
 	float       BoneWeights[4];		// 128  80
 };
+
+struct Vertex2
+{
+	D3DXVECTOR3 Position;			//   0	00
+	D3DXVECTOR3 Normal;				//  12	0C
+	D3DXVECTOR2 TexCoord;			//  24  18
+	float       filler1[24];		//  32	20
+};
 #pragma pack()
 
 // Describes a camera
@@ -58,21 +68,26 @@ struct Camera
 	D3DXVECTOR3 Up;
 };
 
+struct Material
+{
+	Effect					   effect;
+	std::string				   vertexFormat;
+	unsigned long			   nTriangles;
+	unsigned long			   nVertices;
+	Vertex*					   vertices;
+	uint16_t*	               indices;
+	std::vector<unsigned long> boneMapping;
+	bool					   hasCollisionTree;
+};
+
 class IMesh
 {
 public:
 	// Get the vertex and index buffer, respectively
-	virtual const Vertex*      getVertexBuffer()    const = 0;
-	virtual const uint16_t*    getIndexBuffer()     const = 0;
-	virtual unsigned long      getNumVertices()     const = 0;
-	virtual unsigned long      getNumTriangles()    const = 0;
-	virtual const std::string& getVertexFormat()    const = 0;
-	virtual D3DFILLMODE        getFillMode()        const = 0;
-	virtual D3DCULL            getCulling()         const = 0;
-	virtual unsigned int       getNumEffects()      const = 0;
-	virtual const Effect*      getEffect(int index) const = 0;
-	virtual unsigned long      getBoneMapping(int i) const = 0;
-	virtual unsigned long      getNumBoneMappings()  const = 0;
+	virtual const Material&    getMaterial(int i) const = 0;
+	virtual unsigned int       getNumMaterials()  const = 0;
+	virtual D3DFILLMODE        getFillMode()      const = 0;
+	virtual D3DCULL            getCulling()       const = 0;
 	virtual ~IMesh() {}
 };
 
@@ -84,6 +99,12 @@ struct RENDERINFO
 	COLORREF color;
 };
 
+enum RenderMode
+{
+	RM_SOLID,
+	RM_WIREFRAME,
+};
+
 class Engine
 {
 private:
@@ -93,13 +114,15 @@ private:
 public:
 	// Getters
 	const Camera& getCamera() const;
+	Model*        getModel() const;
+	Animation*    getAnimation() const;
+	RenderMode    getRenderMode() const;
 
 	// Setters
+	void       setRenderMode( RenderMode mode );
 	void       setCamera( const Camera& camera );
 	void       setModel(Model* model);
 	void       applyAnimation(const Animation* animation);
-	Model*     getModel() const;
-	Animation* getAnimation() const;
 	void       enableMesh(unsigned int index, bool enabled);
 
 	// Actions

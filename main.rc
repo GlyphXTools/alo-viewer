@@ -69,8 +69,7 @@ BEGIN
     POPUP "&File"
     BEGIN
         MENUITEM "&Open Model\tCtrl+O",         ID_FILE_OPEN
-        MENUITEM "Open &Animation\tCtrl+Shift+O", ID_FILE_OPENANIMATION
-        , GRAYED
+        MENUITEM "Open &Animation\tCtrl+Shift+O", ID_FILE_OPENANIMATION, GRAYED
         MENUITEM SEPARATOR
         MENUITEM "&Exit",                       ID_FILE_EXIT
     END
@@ -91,20 +90,17 @@ END
 //
 
 IDD_DIALOG2 DIALOGEX 0, 0, 418, 231
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Select a file"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,151,209,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,217,209,50,14
-    LISTBOX         IDC_LIST1,7,7,404,199,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
-                    WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LIST1,7,7,404,199,LBS_SORT | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
 END
 
 IDD_DIALOG3 DIALOGEX 0, 0, 382, 247
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Dialog"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -113,22 +109,16 @@ BEGIN
 END
 
 IDD_DIALOG1 DIALOGEX 0, 0, 392, 273
-STYLE DS_SETFONT | DS_FIXEDSYS | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU | WS_THICKFRAME
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 EXSTYLE WS_EX_WINDOWEDGE
 CAPTION "Model details"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Close",IDCANCEL,169,252,50,14
     CONTROL         "",IDC_TAB1,"SysTabControl32",0x0,7,6,189,240
-    CONTROL         "",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | 
-                    TVS_HASLINES | TVS_LINESATROOT | WS_BORDER | WS_TABSTOP,
-                    14,25,175,214,WS_EX_CLIENTEDGE
-    CONTROL         "",IDC_TREE2,"SysTreeView32",TVS_HASBUTTONS | 
-                    TVS_HASLINES | TVS_LINESATROOT | NOT WS_VISIBLE | 
-                    WS_BORDER | WS_TABSTOP,15,26,174,214,WS_EX_CLIENTEDGE
-    EDITTEXT        IDC_EDIT1,203,20,182,225,ES_MULTILINE | ES_READONLY | 
-                    WS_VSCROLL | WS_HSCROLL
+    CONTROL         "",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | WS_BORDER | WS_TABSTOP,14,25,175,214,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_TREE2,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | NOT WS_VISIBLE | WS_BORDER | WS_TABSTOP,15,26,174,214,WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT1,203,20,182,225,ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
 END
 
 
@@ -176,8 +166,7 @@ IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
     "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
     VK_F1,          ID_HELP_ABOUT,          VIRTKEY, NOINVERT
-    "O",            ID_FILE_OPENANIMATION,  VIRTKEY, SHIFT, CONTROL, 
-                                                    NOINVERT
+    "O",            ID_FILE_OPENANIMATION,  VIRTKEY, SHIFT, CONTROL, NOINVERT
 END
 
 
@@ -188,10 +177,31 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON                    "Icon Entry_1.ico"
-IDI_ICON2               ICON                    "Icon Entry_2.ico"
+IDI_LOGO                ICON                    "logo.ico"
 IDI_ICON_PLAY           ICON                    "play.ico"
 IDI_ICON_PAUSE          ICON                    "pause.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_MISSING             BITMAP                  "missing.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// 300
+//
+
+IDS_DEFAULT             300                     "default.fxo"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// 300
+//
+
+IDR_3001                300                     "bin3001.bin"
+IDR_3002                300                     "bin3002.bin"
 #endif    // Dutch (Netherlands) resources
 /////////////////////////////////////////////////////////////////////////////
 

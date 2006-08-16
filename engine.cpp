@@ -23,32 +23,62 @@ class Engine::EngineImpl
 		~AnimatedModel();
 	};
 
+	struct D3DXMaterial
+	{
+		ID3DXEffect*		  pEffect;
+		ID3DXMesh*            pMesh;
+		vector<unsigned long> boneMapping;
+
+		D3DXMaterial()
+		{
+			pMesh   = NULL;
+			pEffect = NULL;
+		}
+
+		D3DXMaterial& operator =(const D3DXMaterial& mat)
+		{
+			if (pMesh != NULL) pMesh->Release();
+			pMesh       = mat.pMesh;
+			pEffect     = mat.pEffect;
+			boneMapping = mat.boneMapping;
+			if (pMesh != NULL) pMesh->AddRef();
+			return *this;
+		}
+
+		D3DXMaterial(const D3DXMaterial& mat)
+		{
+			pMesh       = mat.pMesh;
+			pEffect     = mat.pEffect;
+			boneMapping = mat.boneMapping;
+			if (pMesh != NULL) pMesh->AddRef();
+		}
+
+		~D3DXMaterial()
+		{
+			if (pMesh != NULL) pMesh->Release();
+		}
+	};
+
 	class MeshInfo
 	{
-		bool					enabled;
-		const IMesh*            pMesh;
-		IDirect3DDevice9*       pDevice;
-		ID3DXMesh*              pD3DMesh;
-		const Model*            pModel;
-		ID3DXEffect*            pEffect;
-		IEffectManager*         effectManager;
+		bool				 enabled;
+		const IMesh*         pMesh;
+		IDirect3DDevice9*    pDevice;
+		const Model*         pModel;
+		IEffectManager*      effectManager;
+		vector<D3DXMaterial> materials;
 
-		void checkEffect();
-		void checkMesh();
+		void checkMaterial(int i);
 
 	public: 
-		bool              isEnabled() const         { return enabled; }
-		void              enable(bool enabled)      { this->enabled = enabled; }
-		const Effect*     getMeshEffect() const     { return pMesh->getEffect(0); }
-		ID3DXEffect*      getD3DXEffect()           { checkEffect(); return pEffect; }
-		ID3DXMesh*        getMesh()                 { checkMesh();   return pD3DMesh; }
-		const IMesh*      getIMesh() const          { return pMesh; }
+		bool                isEnabled() const         { return enabled; }
+		void                enable(bool enabled)      { this->enabled = enabled; }
+		unsigned int        getNumMaterials()         { return (unsigned int)materials.size(); }
+		const D3DXMaterial* getMaterial(int i)        { checkMaterial(i); return &materials[i]; }
+		const IMesh*        getIMesh() const          { return pMesh; }
 
 		void invalidate();
 
-		MeshInfo& operator=(const MeshInfo& meshinfo);
-
-		MeshInfo(const MeshInfo& meshinfo);
 		MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled = false);
 		~MeshInfo();
 	};
@@ -59,6 +89,7 @@ class Engine::EngineImpl
 		D3DXMATRIX  View;
 		D3DXMATRIX  Projection;
 		Camera      Eye;
+		RenderMode  renderMode;
 		D3DLIGHT9   Lights[1];
 	};
 
@@ -77,7 +108,7 @@ class Engine::EngineImpl
 	std::vector<MeshInfo> meshes;
 
 	void composeParametersTable(std::map<std::string,Parameter>& parameters);
-	void setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, std::vector<IDirect3DTexture9*>& usedTextures);
+	void setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param);
 	void setCamera( const Camera& camera );
 
 	bool render(unsigned int frame, const RENDERINFO& ri);
@@ -156,33 +187,34 @@ Engine::EngineImpl::AnimatedModel::~AnimatedModel()
 // Invalidate the mesh
 void Engine::EngineImpl::MeshInfo::invalidate()
 {
-	if (pEffect != NULL)
+	for (size_t i = 0; i < materials.size(); i++)
 	{
-		pEffect->Release();
-		pEffect = NULL;
-	}
-
-	if (pD3DMesh != NULL)
-	{
-		pD3DMesh->Release();
-		pD3DMesh = NULL;
+		materials[i].pEffect = NULL;
+		if (materials[i].pMesh != NULL)
+		{
+			materials[i].pMesh->Release();
+			materials[i].pMesh = NULL;
+		}
 	}
 }
 
-void Engine::EngineImpl::MeshInfo::checkEffect()
+void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 {
-	const Effect* effect = pMesh->getEffect(0);
-	if (pEffect == NULL && effect != NULL)
+	const Material& material = pMesh->getMaterial(i);
+
+	if (materials[i].pEffect == NULL)
 	{
-		pEffect = effectManager->getEffect( pDevice, effect->name );
-		if (pEffect != NULL)
+		// Recreate effect
+		materials[i].pEffect = effectManager->getEffect( pDevice, material.effect.name );
+		if (materials[i].pEffect != NULL)
 		{
+			ID3DXEffect* pEffect  = materials[i].pEffect;
 			D3DXHANDLE hTechnique = NULL;
 			D3DXEFFECT_DESC desc;
 			pEffect->GetDesc(&desc);
 
-			const char* LODs[] = {"DX9", "DX8", "FIXEDFUNCTION"};
-			for (unsigned int lod = 0; lod < 2 && hTechnique == NULL; lod++)
+			const char* LODs[] = {"DX9", "DX8", "DX8ATI", "FIXEDFUNCTION"};
+			for (unsigned int lod = 0; lod < 4 && hTechnique == NULL; lod++)
 			{
 				for (unsigned int i = 0; i < desc.Techniques && hTechnique == NULL; i++)
 				{
@@ -211,12 +243,19 @@ void Engine::EngineImpl::MeshInfo::checkEffect()
 			pEffect->SetTechnique( hTechnique );
 		}
 	}
-}
 
-void Engine::EngineImpl::MeshInfo::checkMesh()
-{
-	if (pD3DMesh == NULL)
+	if (materials[i].pMesh == NULL && material.nVertices > 0 && material.nTriangles > 0)
 	{
+		// Recreate mesh
+		D3DVERTEXELEMENT9 elements[] = {
+			{0,   0, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_POSITION, 0},
+			{0,  12, D3DDECLTYPE_FLOAT4,   0, D3DDECLUSAGE_NORMAL  , 0},
+			{0,  28, D3DDECLTYPE_FLOAT2,   0, D3DDECLUSAGE_TEXCOORD, 0},
+			{0,  36, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_TANGENT,  0},
+			{0,  48, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_BINORMAL, 0},
+			D3DDECL_END()
+		};
+
 		#pragma pack(1)
 		struct RSkinVertex
 		{
@@ -228,18 +267,10 @@ void Engine::EngineImpl::MeshInfo::checkMesh()
 		};
 		#pragma pack()
 
-		const string& format = pMesh->getVertexFormat();
-		D3DVERTEXELEMENT9 elements[] = {
-			{0,   0, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_POSITION, 0},
-			{0,  12, D3DDECLTYPE_FLOAT4,   0, D3DDECLUSAGE_NORMAL  , 0},
-			{0,  28, D3DDECLTYPE_FLOAT2,   0, D3DDECLUSAGE_TEXCOORD, 0},
-			{0,  36, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_TANGENT,  0},
-			{0,  48, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_BINORMAL, 0},
-			D3DDECL_END()
-		};
+		const string& format = material.vertexFormat;
 
 		HRESULT hErr;
-		if (FAILED(hErr = D3DXCreateMesh(pMesh->getNumTriangles(), pMesh->getNumVertices(), 0, elements, pDevice, &pD3DMesh)))
+		if (FAILED(hErr = D3DXCreateMesh(material.nTriangles, material.nVertices, D3DXMESH_WRITEONLY, elements, pDevice, &materials[i].pMesh)))
 		{
 			throw D3DException(hErr);
 		}
@@ -248,9 +279,9 @@ void Engine::EngineImpl::MeshInfo::checkMesh()
 		float texScale = (format == "alD3dVertRSkinNU2" || format == "alD3dVertB4I4NU2") ? 4096.0f : 1.0f;
 
 		RSkinVertex* data;
-		pD3DMesh->LockVertexBuffer(D3DLOCK_DISCARD, (void**)&data );
-		const Vertex* v = pMesh->getVertexBuffer();
-		for (unsigned int i = 0; i < pD3DMesh->GetNumVertices(); i++, data++, v++ )
+		materials[i].pMesh->LockVertexBuffer(D3DLOCK_DISCARD, (void**)&data);
+		const Vertex* v = material.vertices;
+		for (unsigned int j = 0; j < material.nVertices; j++, data++, v++ )
 		{
 			data->Position = v->Position;
 			data->Normal   = D3DXVECTOR4(v->Normal.x, v->Normal.y, v->Normal.z, (float)v->BoneIndices[0] );
@@ -258,50 +289,28 @@ void Engine::EngineImpl::MeshInfo::checkMesh()
 			data->Tangent  = v->Tangent;
 			data->Binormal = v->Binormal;
 		}
-		pD3DMesh->UnlockVertexBuffer();
+		materials[i].pMesh->UnlockVertexBuffer();
 
-		pD3DMesh->LockIndexBuffer(D3DLOCK_DISCARD, (void**)&data );
-		memcpy( data, pMesh->getIndexBuffer(), pD3DMesh->GetNumFaces() * 3 * sizeof(uint16_t) );
-		pD3DMesh->UnlockIndexBuffer();
+		materials[i].pMesh->LockIndexBuffer(D3DLOCK_DISCARD, (void**)&data);
+		memcpy( data, material.indices, material.nTriangles * 3 * sizeof(uint16_t) );
+		materials[i].pMesh->UnlockIndexBuffer();
 	}
-}
-
-Engine::EngineImpl::MeshInfo& Engine::EngineImpl::MeshInfo::operator=(const MeshInfo& meshinfo)
-{
-	enabled  = meshinfo.enabled;
-	pMesh    = meshinfo.pMesh;
-	pModel   = meshinfo.pModel;
-	pDevice  = meshinfo.pDevice;
-	pD3DMesh = meshinfo.pD3DMesh;
-	pEffect  = meshinfo.pEffect;
-	effectManager = meshinfo.effectManager;
-	if (pD3DMesh != NULL) pD3DMesh->AddRef();
-	if (pEffect  != NULL) pEffect ->AddRef();
-	return *this;
-}
-
-Engine::EngineImpl::MeshInfo::MeshInfo(const MeshInfo& meshinfo)
-{
-	enabled  = meshinfo.enabled;
-	pMesh    = meshinfo.pMesh;
-	pModel   = meshinfo.pModel;
-	pDevice  = meshinfo.pDevice;
-	pD3DMesh = meshinfo.pD3DMesh;
-	pEffect  = meshinfo.pEffect;
-	effectManager = meshinfo.effectManager;
-	if (pD3DMesh != NULL) pD3DMesh->AddRef();
-	if (pEffect  != NULL) pEffect ->AddRef();
 }
 
 Engine::EngineImpl::MeshInfo::MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled)
 {
 	pMesh            = mesh;
-	pD3DMesh         = NULL;
-	pEffect          = NULL;
 	this->pModel     = model;
 	this->pDevice    = pDevice;
 	this->enabled    = enabled;
 	this->effectManager = effectManager;
+
+	unsigned int nMaterials = mesh->getNumMaterials();
+	materials.resize(nMaterials);
+	for (unsigned int i = 0; i < nMaterials; i++)
+	{
+		materials[i].boneMapping = mesh->getMaterial(i).boneMapping;
+	}
 }
 
 Engine::EngineImpl::MeshInfo::~MeshInfo()
@@ -398,10 +407,14 @@ void Engine::EngineImpl::composeParametersTable(map<string,Parameter>& parameter
 }
 
 // Set the parameter for this effect
-void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param, vector<IDirect3DTexture9*>& usedTextures)
+void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param)
 {
 	switch (param.type)
 	{
+		case Parameter::INT:
+			pEffect->SetInt(hParam, param.m_int);
+			break;
+
 		case Parameter::FLOAT:
 			pEffect->SetFloat(hParam, param.m_float);
 			break;
@@ -419,7 +432,6 @@ void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, c
 			IDirect3DTexture9* pTexture = textureManager->getTexture(pDevice, param.m_texture);
 			if (pTexture != NULL)
 			{
-				usedTextures.push_back(pTexture);
 				pEffect->SetTexture(hParam, pTexture);
 			}
 			break;
@@ -467,11 +479,14 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 	pDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
 	pDevice->BeginScene();
 
+	DWORD fillMode = (settings.renderMode == RM_WIREFRAME) ? D3DFILL_WIREFRAME : D3DFILL_SOLID;
+
 	// Render all the meshes
-	for (unsigned int i = 0; i < meshes.size(); i++)
+	for (int i = (int)meshes.size() - 1; i >= 0 ; i--)
 	{
 		MeshInfo& meshinfo = meshes[i];
-		if (!meshinfo.isEnabled())
+		unsigned int numMaterials = meshinfo.getNumMaterials();
+		if (!meshinfo.isEnabled() || numMaterials == 0)
 		{
 			continue;
 		}
@@ -482,107 +497,104 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 		// Set world transformation
 		settings.World = animatedModel->getAnimatedBone( model->getConnection(i), frame);
 
-		map<string,Parameter> parameters;
-		composeParametersTable(parameters);
-
-		ID3DXEffect*  pD3DXEffect = meshinfo.getD3DXEffect();
-		const Effect* pMeshEffect = meshinfo.getMeshEffect();
-
-		if (pD3DXEffect != NULL && pMeshEffect != NULL)
+		for (unsigned int m = 0; m < numMaterials; m++)
 		{
-			// We have an effect, so use it
-			D3DXEFFECT_DESC effdesc;
-			pD3DXEffect->GetDesc(&effdesc);
+			map<string,Parameter> parameters;
+			composeParametersTable(parameters);
 
-			vector<IDirect3DTexture9*> usedTextures;
-
-			// Set the parameters with semantics from the effects file
-			for (unsigned int iParam = 0; iParam < effdesc.Parameters; iParam++)
+			const D3DXMaterial* material = meshinfo.getMaterial(m);
+			if (material->pEffect != NULL)
 			{
-				D3DXHANDLE hParam = pD3DXEffect->GetParameter(NULL, iParam);
-				D3DXPARAMETER_DESC desc;
-				pD3DXEffect->GetParameterDesc( hParam, &desc );
-				if (desc.Semantic != NULL)
-				{
-					if (strcmp(desc.Semantic,"SKINMATRIXARRAY") == 0)
-					{
-						D3DXMATRIX skinArray[24];
+				// We have an effect, so use it
+				D3DXEFFECT_DESC effdesc;
+				ID3DXEffect* pEffect = material->pEffect;
+				pEffect->GetDesc(&effdesc);
 
-						const IMesh* mesh = meshinfo.getIMesh();
-						unsigned long numMappings = mesh->getNumBoneMappings();
-						for (unsigned long m = 0; m < numMappings; m++)
+				D3DXMATRIX skinArray[24];
+				skinArray[0] = settings.World;
+
+				// Set the parameters with semantics from the effects file
+				for (unsigned int iParam = 0; iParam < effdesc.Parameters; iParam++)
+				{
+					D3DXHANDLE hParam = pEffect->GetParameter(NULL, iParam);
+					D3DXPARAMETER_DESC desc;
+					pEffect->GetParameterDesc( hParam, &desc );
+					if (desc.Semantic != NULL)
+					{
+						if (strcmp(desc.Semantic,"SKINMATRIXARRAY") == 0)
 						{
-							unsigned long bone = mesh->getBoneMapping(m);
-							
-							D3DXMATRIX transform;
-							model->getBoneTransformation(bone, transform);
-							D3DXMatrixInverse(&transform, NULL, &transform);
+							const IMesh* mesh = meshinfo.getIMesh();
+							unsigned int numMappings = (unsigned int)material->boneMapping.size();
+							for (unsigned long m = 0; m < numMappings; m++)
+							{
+								unsigned long bone = material->boneMapping[m];
+								
+								D3DXMATRIX transform;
+								model->getBoneTransformation(bone, transform);
+								D3DXMatrixInverse(&transform, NULL, &transform);
 
-							skinArray[m] = animatedModel->getAnimatedBone(bone, frame);
-							D3DXMatrixMultiply(&skinArray[m], &transform, &skinArray[m]);
+								skinArray[m] = animatedModel->getAnimatedBone(bone, frame);
+								D3DXMatrixMultiply(&skinArray[m], &transform, &skinArray[m]);
+							}
+
+							pEffect->SetMatrixArray(hParam, skinArray, max(1,numMappings));
 						}
-
-						pD3DXEffect->SetMatrixArray(hParam, skinArray, numMappings);
-					}
-					else if (strcmp(desc.Semantic,"SPH_LIGHT_FILL") == 0)
-					{
-						pD3DXEffect->SetMatrixArray(hParam, SPH_Light_Fill, 3);
-					}
-					else if (strcmp(desc.Semantic,"SPH_LIGHT_ALL") == 0)
-					{
-						pD3DXEffect->SetMatrixArray(hParam, SPH_Light_All, 3);
-					}
-					else
-					{
-						map<string,Parameter>::const_iterator p = parameters.find(desc.Semantic);
-						if (p != parameters.end())
+						else if (strcmp(desc.Semantic,"SPH_LIGHT_FILL") == 0)
 						{
-							setParameter(pD3DXEffect, hParam, p->second, usedTextures);
+							pEffect->SetMatrixArray(hParam, SPH_Light_Fill, 3);
+						}
+						else if (strcmp(desc.Semantic,"SPH_LIGHT_ALL") == 0)
+						{
+							pEffect->SetMatrixArray(hParam, SPH_Light_All, 3);
+						}
+						else
+						{
+							map<string,Parameter>::const_iterator p = parameters.find(desc.Semantic);
+							if (p != parameters.end())
+							{
+								setParameter(pEffect, hParam, p->second);
+							}
+						}
+					}
+
+					if (desc.Name != NULL && ri.useColor && strcmp(desc.Name, "Colorization") == 0)
+					{
+						float color[4] = { GetRValue(ri.color) / 255.0f, GetGValue(ri.color) / 255.0f, GetBValue(ri.color) / 255.0f, 1.0f};
+						pEffect->SetFloatArray(hParam, color, 4);
+					}
+				}
+
+				// Set the parameters from the mesh file
+				const Effect& effect = meshinfo.getIMesh()->getMaterial(m).effect;
+				for (vector<Parameter>::const_iterator p = effect.parameters.begin(); p != effect.parameters.end(); p++)
+				{
+					if (p->name != "Colorization" || !ri.useColor)
+					{
+						D3DXHANDLE hParam = pEffect->GetParameterByName( NULL, p->name.c_str() );
+						if (hParam != NULL)
+						{
+							setParameter(pEffect, hParam, *p);
 						}
 					}
 				}
-
-				if (desc.Name != NULL && ri.useColor && strcmp(desc.Name, "Colorization") == 0)
-				{
-					float color[4] = { GetRValue(ri.color) / 255.0f, GetGValue(ri.color) / 255.0f, GetBValue(ri.color) / 255.0f, 1.0f};
-					pD3DXEffect->SetFloatArray(hParam, color, 4);
+		
+				// Use the effect to render the mesh
+				unsigned int nPasses;
+				pEffect->Begin(&nPasses, 0);
+				for (unsigned int iPass = 0; iPass < nPasses; iPass++)
+				{	
+					pEffect->BeginPass(iPass);
+					pEffect->CommitChanges();
+					pDevice->SetRenderState(D3DRS_FILLMODE, fillMode);
+					material->pMesh->DrawSubset(0);
+					pEffect->EndPass();
 				}
-			}
-
-			// Set the parameters from the mesh file
-			for (vector<Parameter>::const_iterator p = pMeshEffect->parameters.begin(); p != pMeshEffect->parameters.end(); p++)
-			{
-				if (p->name != "Colorization" || !ri.useColor)
-				{
-					D3DXHANDLE hParam = pD3DXEffect->GetParameterByName( NULL, p->name.c_str() );
-					if (hParam != NULL)
-					{
-						setParameter(pD3DXEffect, hParam, *p, usedTextures );
-					}
-				}
-			}
-	
-			// Use the effect to render the mesh
-			unsigned int nPasses;
-			pD3DXEffect->Begin(&nPasses, 0);
-			for (unsigned int iPass = 0; iPass < nPasses; iPass++)
-			{	
-				pD3DXEffect->BeginPass(iPass);
-				pD3DXEffect->CommitChanges();
-				meshinfo.getMesh()->DrawSubset(0);
-				pD3DXEffect->EndPass();
-			}
-			pD3DXEffect->End();
-
-			// Release the textures we used
-			for (vector<IDirect3DTexture9*>::iterator p = usedTextures.begin(); p != usedTextures.end(); p++)
-			{
-				(*p)->Release();
+				pEffect->End();
 			}
 		}
 	}
 
-	if (ri.showBones)
+	if (ri.showBones && model != NULL)
 	{
 		//
 		// Render the model's bones
@@ -640,7 +652,7 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 	pDevice->EndScene();
 	pDevice->Present(NULL, NULL, NULL, NULL);
 
-	if (ri.showBones && ri.showBoneNames)
+	if (ri.showBones && ri.showBoneNames && model != NULL)
 	{
 		// Show bone names
 		HDC hDC = GetDC(dpp.hDeviceWindow);
@@ -729,6 +741,7 @@ Engine::EngineImpl::EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffe
 	this->textureManager = textureManager;
 	this->effectManager  = effectManager;
 	this->model          = NULL;
+	this->settings.renderMode = RM_SOLID;
 
 	if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
 	{
@@ -843,6 +856,16 @@ Engine::EngineImpl::~EngineImpl()
 }
 
 // Get the current camera
+RenderMode Engine::getRenderMode() const
+{
+	return pimpl->settings.renderMode;
+}
+
+void Engine::setRenderMode(RenderMode mode)
+{
+	pimpl->settings.renderMode = mode;
+}
+
 const Camera& Engine::getCamera() const
 {
 	return pimpl->settings.Eye;

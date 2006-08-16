@@ -10,8 +10,10 @@ class BoneAnimation;
 
 class Animation
 {
+public:
 	class AnimationImpl;
-	
+
+private:
 	AnimationImpl* pimpl;
 
 public:

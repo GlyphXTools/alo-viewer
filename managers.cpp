@@ -95,18 +95,14 @@ File* MegaFile::getFile(std::string path) const
 				high = low = mid;
 				while (low  > 0 && files[low-1].crc == crc) low--;
 				while (high < last && files[high+1].crc == crc) high++;
-				if (low == high)
-				{
-					mid = low;
-				}
-				else for (mid = low; mid <= high; mid++)
+				for (mid = low; mid <= high; mid++)
 				{
 					if (filenames[ files[mid].nameIndex ] == path)
 					{
-						break;
+						return new SubFile(file, files[mid].start, files[mid].size );
 					}
 				}
-				return new SubFile(file, files[mid].start, files[mid].size );
+				break;				
 			}
 			if (crc < files[mid].crc) high = mid - 1;
 			else                      low  = mid + 1;

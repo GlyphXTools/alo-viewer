@@ -1,114 +1,181 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.10"
+	Version="8,00"
 	Name="AloViewer"
 	ProjectGUID="{1CCDA8DD-1B55-46E4-8EE0-A743D0EF090C}"
-	Keyword="Win32Proj">
+	RootNamespace="AloViewer"
+	Keyword="Win32Proj"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="Debug"
 			IntermediateDirectory="Debug"
 			ConfigurationType="1"
-			CharacterSet="2">
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Include&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
-				MinimalRebuild="TRUE"
+				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="5"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				WarnAsError="TRUE"
-				Detect64BitPortabilityProblems="TRUE"
-				DebugInformationFormat="4"/>
+				WarnAsError="true"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="4"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="libs"
-				GenerateDebugInformation="TRUE"
+				AdditionalLibraryDirectories="libs;&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Lib\x86&quot;"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/AloViewer.pdb"
 				SubSystem="2"
-				TargetMachine="1"/>
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCXMLDataGeneratorTool"/>
+				Name="VCWebDeploymentTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="Release"
 			IntermediateDirectory="Release"
 			ConfigurationType="1"
-			CharacterSet="2">
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Include&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
-				RuntimeLibrary="4"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				WarnAsError="TRUE"
-				Detect64BitPortabilityProblems="TRUE"
-				DebugInformationFormat="3"/>
+				WarnAsError="true"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="libs;C:\Program Files\Microsoft DirectX SDK (February 2006)\Lib\x86"
-				GenerateDebugInformation="TRUE"
+				AdditionalLibraryDirectories="libs;&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Lib\x86&quot;"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				TargetMachine="1"/>
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCXMLDataGeneratorTool"/>
+				Name="VCWebDeploymentTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -117,115 +184,192 @@
 		<Filter
 			Name="Source Files"
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
-			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
+			>
 			<File
-				RelativePath=".\animation.cpp">
+				RelativePath=".\animation.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\chunks.cpp">
+				RelativePath=".\chunks.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\crc32.cpp">
+				RelativePath=".\crc32.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\dialogs.cpp">
+				RelativePath=".\default.fx"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;"
+						Outputs="$(OutDir)$(InputName).fxo"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;"
+						Outputs="$(OutDir)$(InputName).fxo"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\engine.cpp">
+				RelativePath=".\dialogs.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\files.cpp">
+				RelativePath=".\engine.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\main.cpp">
+				RelativePath=".\files.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\managers.cpp">
+				RelativePath=".\main.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\mesh.cpp">
+				RelativePath=".\managers.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\model.cpp">
+				RelativePath=".\mesh.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\xml.cpp">
+				RelativePath=".\model.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\xml.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
+			>
 			<File
-				RelativePath=".\animation.h">
+				RelativePath=".\animation.h"
+				>
 			</File>
 			<File
-				RelativePath=".\chunks.h">
+				RelativePath=".\chunks.h"
+				>
 			</File>
 			<File
-				RelativePath=".\crc32.h">
+				RelativePath=".\crc32.h"
+				>
 			</File>
 			<File
-				RelativePath=".\dialogs.h">
+				RelativePath=".\dialogs.h"
+				>
 			</File>
 			<File
-				RelativePath=".\engine.h">
+				RelativePath=".\engine.h"
+				>
 			</File>
 			<File
-				RelativePath=".\exceptions.h">
+				RelativePath=".\exceptions.h"
+				>
 			</File>
 			<File
-				RelativePath=".\files.h">
+				RelativePath=".\files.h"
+				>
 			</File>
 			<File
-				RelativePath=".\managers.h">
+				RelativePath=".\managers.h"
+				>
 			</File>
 			<File
-				RelativePath=".\mesh.h">
+				RelativePath=".\mesh.h"
+				>
 			</File>
 			<File
-				RelativePath=".\model.h">
+				RelativePath=".\model.h"
+				>
 			</File>
 			<File
-				RelativePath=".\resource.h">
+				RelativePath=".\resource.h"
+				>
 			</File>
 			<File
-				RelativePath=".\types.h">
+				RelativePath=".\types.h"
+				>
 			</File>
 			<File
-				RelativePath=".\xml.h">
+				RelativePath=".\xml.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
+			>
 			<File
-				RelativePath=".\Icon Entry_1.ico">
+				RelativePath=".\bin3001.bin"
+				>
 			</File>
 			<File
-				RelativePath=".\Icon Entry_2.ico">
+				RelativePath=".\bin3002.bin"
+				>
 			</File>
 			<File
-				RelativePath=".\icon1.ico">
+				RelativePath=".\logo.ico"
+				>
 			</File>
 			<File
-				RelativePath=".\icon2.ico">
+				RelativePath=".\main.rc"
+				>
 			</File>
 			<File
-				RelativePath=".\main.rc">
+				RelativePath=".\missing.bmp"
+				>
 			</File>
 			<File
-				RelativePath=".\pause.ico">
+				RelativePath=".\pause.ico"
+				>
 			</File>
 			<File
-				RelativePath=".\play.ico">
+				RelativePath=".\play.ico"
+				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\default.fxo"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="RESOURCE_FILE"
-			Value="main.rc"/>
+			Value="main.rc"
+		/>
 	</Globals>
 </VisualStudioProject>

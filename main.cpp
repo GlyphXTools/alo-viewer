@@ -16,9 +16,35 @@ class TextureManager : public ITextureManager
 {
 	typedef map<string,IDirect3DTexture9*> TextureMap;
 
-	TextureMap    textures;
-	string        basePath;
-	IFileManager* fileManager;
+	TextureMap			textures;
+	string				basePath;
+	IFileManager*		fileManager;
+	IDirect3DTexture9*  pDefaultTexture;
+
+	IDirect3DTexture9* load(IDirect3DDevice9* pDevice, const string& filename)
+	{
+		TextureMap::iterator p = textures.find(filename);
+		if (p != textures.end())
+		{
+			// Texture has already been loaded
+			return p->second;
+		}
+
+		IDirect3DTexture9* pTexture = NULL;
+		File* file = fileManager->getFile( basePath + filename );
+		if (file != NULL)
+		{
+			unsigned long size = file->getSize();
+			char* data = new char[ size ];
+			file->read( (void*)data, size );
+			if (D3DXCreateTextureFromFileInMemory( pDevice, (void*)data, size, &pTexture ) != D3D_OK)
+			{
+				pTexture = NULL;
+			}
+			delete[] data;
+		}
+		return pTexture;
+	}
 
 public:
 	// Invalidate all entries (i.e. clear them)
@@ -29,50 +55,57 @@ public:
 			i->second->Release();
 		}
 		textures.clear();
+		if (pDefaultTexture != NULL)
+		{
+			pDefaultTexture->Release();
+			pDefaultTexture = NULL;
+		}
 	}
 
-	IDirect3DTexture9* getTexture(IDirect3DDevice9* pDevice, string name)
+	IDirect3DTexture9* getTexture(IDirect3DDevice9* pDevice, string filename)
 	{
-		IDirect3DTexture9* pTexture = NULL;
-		transform(name.begin(), name.end(), name.begin(), toupper);
-		TextureMap::iterator p = textures.find(name);
-		if (p != textures.end())
+		transform(filename.begin(), filename.end(), filename.begin(), toupper);
+
+		IDirect3DTexture9* pTexture = load(pDevice, filename);
+		if (pTexture == NULL)
 		{
-			// Texture has already been loaded
-			pTexture = p->second;
-		}
-		else
-		{
-			// Texture has not yet been loaded; load it
-			string filename = name;
-			if (filename.rfind(".TGA") != string::npos)
+			size_t pos;
+			string name = filename;
+			if ((pos = filename.rfind('.')) != string::npos)
 			{
-				filename = filename.substr(0, filename.rfind(".TGA") ) + ".DDS";
+				name = name.substr(0, pos) + ".DDS";
 			}
-			File* file = fileManager->getFile( basePath + filename );
-			if (file != NULL)
+		
+			pTexture = load(pDevice, name);
+			if (pTexture == NULL)
 			{
-				unsigned long size = file->getSize();
-				char* data = new char[ size ];
-				file->read( (void*)data, size );
-				if (D3DXCreateTextureFromFileInMemory( pDevice, (void*)data, size, &pTexture ) == D3D_OK)
+				// Load and return default placeholder texture
+				if (pDefaultTexture == NULL)
 				{
-					textures.insert(make_pair(name, pTexture));
+					D3DXCreateTextureFromResource( pDevice, GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_MISSING), &pDefaultTexture );
 				}
-				delete[] data;
+
+				if (pDefaultTexture != NULL)
+				{
+					pTexture = pDefaultTexture;
+					pDefaultTexture->AddRef();
+				}
 			}
 		}
+
 		if (pTexture != NULL)
 		{
-			pTexture->AddRef();
+			textures.insert(make_pair(filename, pTexture));
 		}
+
 		return pTexture;
 	}
 
 	TextureManager(IFileManager* fileManager, const std::string& basePath)
 	{
-		this->basePath    = basePath;
-		this->fileManager = fileManager;
+		this->basePath		  = basePath;
+		this->fileManager	  = fileManager;
+		this->pDefaultTexture = NULL;
 	}
 
 	~TextureManager()
@@ -88,6 +121,34 @@ class EffectManager : public IEffectManager
 	EffectMap     effects;
 	string        basePath;
 	IFileManager* fileManager;
+	ID3DXEffect*  pDefaultEffect;
+
+	ID3DXEffect* load(IDirect3DDevice9* pDevice, const string& filename)
+	{
+		EffectMap::iterator p = effects.find(filename);
+		if (p != effects.end())
+		{
+			// Effect has already been loaded
+			return p->second;
+		}
+		
+		// Effect has not yet been loaded; load it
+		ID3DXEffect* pEffect = NULL;
+		File* file = fileManager->getFile( basePath + filename );
+		if (file != NULL)
+		{
+			unsigned long size = file->getSize();
+			char* data = new char[ size ];
+			file->read( (void*)data, size );
+			if (D3DXCreateEffect(pDevice, data, size, NULL, NULL, 0, NULL, &pEffect, NULL) != D3D_OK)
+			{
+				pEffect = NULL;
+			}
+			delete[] data;
+		}
+
+		return pEffect;
+	}
 
 public:
 
@@ -99,51 +160,62 @@ public:
 			i->second->Release();
 		}
 		effects.clear();
+		if (pDefaultEffect != NULL)
+		{
+			pDefaultEffect->Release();
+			pDefaultEffect = NULL;
+		}
 	}
 
-	ID3DXEffect* getEffect(IDirect3DDevice9* pDevice, std::string name)
+	ID3DXEffect* getEffect(IDirect3DDevice9* pDevice, string filename)
 	{
-		ID3DXEffect* pEffect = NULL;
-		transform(name.begin(), name.end(), name.begin(), toupper);
-		EffectMap::iterator p = effects.find(name);
-		if (p != effects.end())
+		transform(filename.begin(), filename.end(), filename.begin(), toupper);
+		ID3DXEffect* pEffect = load(pDevice, filename);
+		if (pEffect == NULL)
 		{
-			// Effect has already been loaded
-			pEffect = p->second;
-		}
-		else if (name != "")
-		{
-			// Effect has not yet been loaded; load it
-			string filename = name;
-			if (filename.rfind(".FX") != string::npos)
+			string name = filename;
+			size_t pos  = name.rfind(".");
+			if (pos != string::npos)
 			{
-				filename = filename.substr(0, filename.rfind(".FX") ) + ".FXO";
+				name = name.substr(0, pos) + ".FXO";
 			}
-			
-			File* file = fileManager->getFile( basePath + filename );
-			if (file != NULL)
+
+			pEffect = load(pDevice, name);
+			if (pEffect == NULL)
 			{
-				unsigned long size = file->getSize();
-				char* data = new char[ size ];
-				file->read( (void*)data, size );
-				if (D3DXCreateEffect(pDevice, data, size, NULL, NULL, 0, NULL, &pEffect, NULL) == D3D_OK)
+				// Load and return default placeholder texture
+				if (pDefaultEffect == NULL)
 				{
-					effects.insert(make_pair(name, pEffect));
+					HRSRC   hRsrc = FindResource(NULL, MAKEINTRESOURCE(IDS_DEFAULT), MAKEINTRESOURCE(300));
+					HGLOBAL hGlobal;
+					LPVOID  data;
+					if (hRsrc != NULL && (hGlobal = LoadResource(NULL, hRsrc)) != NULL && (data = LockResource(hGlobal)) != NULL)
+					{
+						D3DXCreateEffect(pDevice, data, SizeofResource(NULL, hRsrc), NULL, NULL, 0, NULL, &pDefaultEffect, NULL);
+					}
 				}
-				delete[] data;
+				
+				if (pDefaultEffect != NULL)
+				{
+					pEffect = pDefaultEffect;
+					pDefaultEffect->AddRef();
+				}
 			}
 		}
+
 		if (pEffect != NULL)
 		{
-			pEffect->AddRef();
+			effects.insert(make_pair(filename, pEffect));
 		}
+
 		return pEffect;
 	}
 
 	EffectManager(IFileManager* fileManager, const std::string& basePath)
 	{
-		this->basePath    = basePath;
-		this->fileManager = fileManager;
+		this->basePath       = basePath;
+		this->fileManager    = fileManager;
+		this->pDefaultEffect = NULL;
 	}
 
 	~EffectManager()
@@ -258,7 +330,7 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 							break;
 
 						case ID_HELP_ABOUT:
-							MessageBox(NULL, "Alamo Object Viewer, v0.3\n\nBy Mike Lankamp", "About", MB_OK );
+							MessageBox(NULL, "Alamo Object Viewer, v0.4\n\nBy Mike Lankamp", "About", MB_OK );
 							break;
 					}
 				}
@@ -272,6 +344,13 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 						{
 							info->engine->enableMesh(i, SendMessage(info->hListBox, LB_GETSEL, i, 0) > 0);
 						}
+						InvalidateRect(info->hRenderWnd, NULL, FALSE);
+						UpdateWindow(info->hRenderWnd);
+					}
+					else if (hControl == info->hWireframeCheckbox)
+					{
+						// Redraw window
+						info->engine->setRenderMode( (SendMessage(hControl, BM_GETCHECK, 0, 0) == BST_CHECKED) ? RM_WIREFRAME : RM_SOLID );
 						InvalidateRect(info->hRenderWnd, NULL, FALSE);
 						UpdateWindow(info->hRenderWnd);
 					}
@@ -366,17 +445,21 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		case WM_SIZE:
 			if (info != NULL)
 			{
-				RECT client;
-				GetClientRect(info->hMainWnd, &client);
-				MoveWindow( info->hListBox,      0, 40, 200, client.bottom - 40, TRUE );
-				MoveWindow( info->hRenderWnd,  200, 40, client.right - 200, client.bottom - 70, TRUE );
-				MoveWindow( info->hTimeSlider, 240, client.bottom - 26, client.right - 240, 22, TRUE );
-				MoveWindow( info->hPlayButton, 208, client.bottom - 26, 24, 24, TRUE );
+				info->isMinimized = (wParam == SIZE_MINIMIZED);
+				if (!info->isMinimized)
+				{
+					RECT client;
+					GetClientRect(info->hMainWnd, &client);
+					MoveWindow( info->hListBox,      0, 58, 200, client.bottom - 58, TRUE );
+					MoveWindow( info->hRenderWnd,  200, 40, client.right - 200, client.bottom - 70, TRUE );
+					MoveWindow( info->hTimeSlider, 240, client.bottom - 26, client.right - 240, 22, TRUE );
+					MoveWindow( info->hPlayButton, 208, client.bottom - 26, 24, 24, TRUE );
 
-				// When we resize, we need to kill the device and recreate it
-				info->textureManager->invalidateAll();
-				info->effectManager->invalidateAll();
-				info->engine->reinitialize( info->hRenderWnd, client.right - 200, client.bottom );
+					// When we resize, we need to kill the device and recreate it
+					info->textureManager->invalidateAll();
+					info->effectManager->invalidateAll();
+					info->engine->reinitialize( info->hRenderWnd, client.right - 200, client.bottom );
+				}
 			}
 			break;
 
@@ -699,13 +782,16 @@ void main( ApplicationInfo* info, const vector<string>& argv )
 				}
 			}
 
-			if (info->engine->getModel() != NULL)
+			if (!quit)
 			{
-				render(info);
-			}
-			else if (!quit)
-			{
-				WaitMessage();
+				if (info->engine->getModel() != NULL && !info->isMinimized)
+				{
+					render(info);
+				}
+				else
+				{
+					WaitMessage();
+				}
 			}
 		}
 	}
@@ -727,7 +813,7 @@ static void CreateMainWindow( ApplicationInfo* info )
     wcx.cbClsExtra	  = 0;
     wcx.cbWndExtra    = 0;
     wcx.hInstance     = info->hInstance;
-    wcx.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+    wcx.hIcon         = LoadIcon(info->hInstance, MAKEINTRESOURCE(IDI_LOGO));
     wcx.hCursor       = LoadCursor(NULL, IDC_ARROW);
     wcx.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
     wcx.lpszMenuName  = MAKEINTRESOURCE(IDR_MENU1);
@@ -767,8 +853,13 @@ static void CreateMainWindow( ApplicationInfo* info )
 		if (info->hNamesCheckbox == NULL) throw 0;
 		SendMessage(info->hNamesCheckbox, WM_SETFONT, (WPARAM)hFont, FALSE);
 
+		info->hWireframeCheckbox = CreateWindow("BUTTON", "Show wireframe", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+			8, 40, 184, 12, info->hMainWnd, NULL, info->hInstance, NULL);
+		if (info->hWireframeCheckbox == NULL) throw 0;
+		SendMessage(info->hWireframeCheckbox, WM_SETFONT, (WPARAM)hFont, FALSE);
+
 		info->hListBox = CreateWindowEx(WS_EX_CLIENTEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | LBS_HASSTRINGS | LBS_MULTIPLESEL | LBS_DISABLENOSCROLL,
-			0, 40, 200, client.bottom - 40, info->hMainWnd, NULL, info->hInstance, NULL);
+			0, 58, 200, client.bottom - 58, info->hMainWnd, NULL, info->hInstance, NULL);
 		if (info->hListBox == NULL) throw 0;
 		SendMessage(info->hListBox, WM_SETFONT, (WPARAM)hFont, FALSE);
 		
@@ -832,6 +923,11 @@ vector<string> parseCommandLine()
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	#ifndef NDEBUG
+	AllocConsole();
+	freopen("conout$", "w", stdout);
+	#endif 
+
 	try
 	{
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED );
@@ -839,6 +935,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		ApplicationInfo info;
 		info.hInstance     = hInstance;
 		info.playing       = false;
+		info.isMinimized   = false;
 		info.selectedColor = NUM_COLORS;
 
 		CreateMainWindow( &info );
@@ -850,6 +947,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		str << "Caught exception from " + e.getFilename() << ":" << e.getLine() << endl << endl << e.getMessage() << endl;
 		MessageBox(NULL, str.str().c_str(), NULL, MB_OK );
 	}
+
+	#ifndef NDEBUG
+	FreeConsole();
+	#endif 
 
 	return 0;
 }

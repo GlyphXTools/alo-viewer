@@ -41,6 +41,13 @@ public:
 	~IOException() {}
 };
 
+class OutOfMemoryException : public Exception
+{
+public:
+	OutOfMemoryException(const std::string filename, int line) : Exception(filename, line) {}
+	~OutOfMemoryException() {}
+};
+
 class LoadException : public Exception
 {
 public:
@@ -83,6 +90,7 @@ public:
 // Define the instances without file information
 //
 #define Exception(msg)				(Exception(__FILE__, __LINE__, msg))
+#define OutOfMemoryException()		(OutOfMemoryException(__FILE__, __LINE__))
 #define IOException(msg)			(IOException(__FILE__, __LINE__, msg))
 #define LoadException(msg)			(LoadException(__FILE__, __LINE__, msg))
 #define D3DException(err)			(D3DException(__FILE__, __LINE__, err))

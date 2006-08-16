@@ -176,7 +176,6 @@ Model* DlgOpenModel( ApplicationInfo *info )
 	{
 		MessageBox(NULL, "Unable to open the specified model", NULL, MB_OK | MB_ICONHAND );
 		model = NULL;
-		throw;
 	}
 	return model;
 }
@@ -243,7 +242,6 @@ Animation* DlgOpenAnimation( ApplicationInfo *info, const Model* model )
 	{
 		MessageBox(NULL, "Unable to open the specified animation", NULL, MB_OK | MB_ICONHAND );
 		anim = NULL;
-		throw;
 	}
 	return anim;
 }
@@ -258,29 +256,37 @@ static const int SHIFT_BONE     = 0;
 static const int MASK_BONE		= 0x03FFFFFF;
 static const int BONE_INVALID	= MASK_BONE;
 
-static const int SHIFT_MESHPART       = 23;
-static const int MASK_MESHPART        = 0x7;
-static const int MESHPART_BOUNDINGBOX = 0;
-static const int MESHPART_EFFECTS     = 1;
-static const int MESHPART_VERTICES    = 2;
-static const int MESHPART_TRIANGLES   = 3;
-static const int MESHPART_MAPPING     = 4;
-static const int MESHPART_COLLISION   = 5;
-static const int MESHPART_INVALID     = MASK_MESHPART;
+static const int SHIFT_MATERIAL     = 22;
+static const int MASK_MATERIAL      = 0xF;
+static const int MATERIAL_INVALID   = MASK_MATERIAL;
 
-static const int SHIFT_EFFECT      = 16;
-static const int MASK_EFFECT       = 0x7F;
+static const int SHIFT_MESHPART       = 19;
+static const int MASK_MESHPART        = 0x7;
+static const int MESHPART_INFORMATION = 0;
+static const int MESHPART_BOUNDINGBOX = 1;
+static const int MESHPART_INVALID     = 7;
+
+static const int SHIFT_MATERIALPART = 19;
+static const int MASK_MATERIALPART  = 0x7;
+static const int MATERIALPART_EFFECT    = 0;
+static const int MATERIALPART_VERTICES  = 1;
+static const int MATERIALPART_TRIANGLES = 2;
+static const int MATERIALPART_MAPPING   = 3;
+static const int MATERIALPART_COLLISION = 4;
+static const int MATERIALPART_INVALID   = 7;
 
 static const int SHIFT_PARAMETER   = 0;
 static const int MASK_PARAMETER    = 0xFFFF;
 static const int PARAMETER_INVALID = 0xFFFF;
 
 
-#define MAKE_BONE(i)			((MESH_BONE << SHIFT_MESH) | ((i) & MASK_BONE))
-#define MAKE_MESH_PART(m,p)		((((m) & MASK_MESH) << SHIFT_MESH) | (((p) & MASK_MESHPART) << SHIFT_MESHPART))
-#define MAKE_PARAMETER(m,e,p)	((((m) & MASK_MESH) << SHIFT_MESH) | (MESHPART_EFFECTS << SHIFT_MESHPART) | (((e) & MASK_EFFECT) << SHIFT_EFFECT) | (((p) & MASK_PARAMETER) << SHIFT_PARAMETER) )
-#define MAKE_EFFECT(m,e)		MAKE_PARAMETER(m,e,PARAMETER_INVALID)
-#define INVALID_ID				MAKE_BONE(BONE_INVALID)
+#define MAKE_BONE(i)				((MESH_BONE << SHIFT_MESH) | ((i) & MASK_BONE))
+#define MAKE_MATERIAL(m,a)			((((m) & MASK_MESH) << SHIFT_MESH) | (((a) & MASK_MATERIAL) << SHIFT_MATERIAL))
+#define MAKE_MATERIAL_PART(m,a,p)	(MAKE_MATERIAL(m,a) | (((p) & MASK_MATERIALPART) << SHIFT_MATERIALPART))
+#define MAKE_MESH_PART(m,p)			(MAKE_MATERIAL(m,MATERIAL_INVALID) | (((p) & MASK_MESHPART) << SHIFT_MESHPART))
+#define MAKE_PARAMETER(m,a,p)		((((m) & MASK_MESH) << SHIFT_MESH) | (((a) & MASK_MATERIAL) << SHIFT_MATERIAL) | (MATERIALPART_EFFECT << SHIFT_MATERIALPART) | (((p) & MASK_PARAMETER) << SHIFT_PARAMETER) )
+#define MAKE_EFFECT(m,a)			MAKE_PARAMETER(m,a,PARAMETER_INVALID)
+#define INVALID_ID					MAKE_BONE(BONE_INVALID)
 
 static void printBone(HWND hEdit, const Model* model, int iBone, stringstream& str)
 {
@@ -340,101 +346,111 @@ static void OnModelTreeSelect(HWND hTree, HWND hEdit, const TVITEM& item, const 
 		{
 			// It's part of a mesh
 			const Mesh* mesh  = model->getMesh(iMesh);
-			unsigned int part = (id >> SHIFT_MESHPART) & MASK_MESHPART;
-			switch (part)
+			unsigned int mat = (id >> SHIFT_MATERIAL) & MASK_MATERIAL;
+			if (mat == MATERIAL_INVALID)
 			{
-			case MESHPART_INVALID:
-			{
-				unsigned int iBone = model->getConnection(iMesh);
-				const Bone* bone   = model->getBone(iBone);
-
-				str << "Index:       " << iMesh << crlf;
-				str << "Name:        " << mesh->getName() << crlf;
-				str << "Attached to: bone #" << iBone << " (" << bone->name << ")" << crlf;
-				break;
-			}
-
-			case MESHPART_BOUNDINGBOX:
-			{
-				D3DXVECTOR3 bb1, bb2;
-				mesh->getBoundingBox(bb1, bb2);
-				str << fixed << setprecision(3);
-				str << "Min X: " << setw(8) << bb1.x << ",   Max X: " << setw(8) << bb2.x << crlf;
-				str << "Min Y: " << setw(8) << bb1.y << ",   Max Y: " << setw(8) << bb2.y << crlf;
-				str << "Min Z: " << setw(8) << bb1.z << ",   Max Z: " << setw(8) << bb2.z << crlf;
-				break;
-			}
-
-			case MESHPART_EFFECTS:
-			{
-				int iEffect = (id >> SHIFT_EFFECT) & MASK_EFFECT;
-				int iParam  = (id >> SHIFT_PARAMETER) & MASK_PARAMETER;
-				const Effect* effect = mesh->getEffect(iEffect);
-				if (iParam == PARAMETER_INVALID)
+				unsigned int part = (id >> SHIFT_MESHPART) & MASK_MESHPART;
+				switch (part)
 				{
-					// It's the effect itself
-					str << "Index: " << iEffect << crlf;
-					str << "File:  " << effect->name << crlf;
-				}
-				else
+				case MESHPART_INFORMATION:
 				{
-					printParameter(hEdit, iParam, effect->parameters[iParam], str);
-				}
-				break;
-			}
-
-			case MESHPART_VERTICES:
-			{
-				unsigned int numVertices = mesh->getNumVertices();
-				const Vertex* v = mesh->getVertexBuffer();
-				str << fixed << setprecision(3);
-
-				str << " Index |          Position          |           Normal           |   Texture Coords  |          Tangent           |          Binormal          | Skin Indices |       Skin Weights      " << crlf;
-				str << "-------+----------------------------+----------------------------+-------------------+----------------------------+----------------------------+--------------+-------------------------" << crlf;
-				for (unsigned int i = 0; i < numVertices; i++, v++)
-				{
-					str << setw(6) << right << i << " | "; 
-					str << setw(8) << v->Position.x << " " << setw(8) << v->Position.y << " " << setw(8) << v->Position.z << " | ";
-					str << setw(8) << v->Normal.x   << " " << setw(8) << v->Normal.y   << " " << setw(8) << v->Normal.z   << " | ";
-					str << setw(8) << v->TexCoord.x << " " << setw(8) << v->TexCoord.y                                    << " | ";
-					str << setw(8) << v->Tangent.x  << " " << setw(8) << v->Tangent.y  << " " << setw(8) << v->Tangent.z  << " | ";
-					str << setw(8) << v->Binormal.x << " " << setw(8) << v->Binormal.y << " " << setw(8) << v->Binormal.z << " | ";
-					str << setw(2) << v->BoneIndices[0] << " " << setw(2) << v->BoneIndices[1] << " " << setw(2) << v->BoneIndices[2] << " " << setw(2) << v->BoneIndices[3] << "  | ";
-					str << setw(5) << v->BoneWeights[0] << " " << setw(5) << v->BoneWeights[1] << " " << setw(5) << v->BoneWeights[2] << " " << setw(5) << v->BoneWeights[3]; 
-					str << crlf;
-				}
-				break;
-			}
-
-			case MESHPART_TRIANGLES:
-			{
-				unsigned int numTriangles = mesh->getNumTriangles();
-				const uint16_t* t = mesh->getIndexBuffer();
-				str << " Index |    Vertex indices   " << crlf;
-				str << "-------+---------------------" << crlf;
-				for (unsigned int i = 0; i < numTriangles; i++, t += 3)
-				{
-					str << setw(6) << i << " | " << setw(6) << t[0] << " "  << setw(6) << t[1] << " "  << setw(6) << t[2] << crlf;
-				}
-				break;
-			}
-
-			case MESHPART_MAPPING:
-			{
-				unsigned int numMappings = mesh->getNumBoneMappings();
-				str << " Skin | Bone | Bone Name" << crlf;
-				str << "------+------+----------------" << crlf;
-				for (unsigned int i = 0; i < numMappings; i++)
-				{
-					unsigned int iBone = mesh->getBoneMapping(i);
+					unsigned int iBone = model->getConnection(iMesh);
 					const Bone* bone   = model->getBone(iBone);
-					str << setw(5) << i << " | " << setw(4) << iBone << " | " << bone->name << crlf;
-				}
-				break;
-			}
 
-			case MESHPART_COLLISION:
-				break;
+					str << "Index:       " << iMesh << crlf;
+					str << "Name:        " << mesh->getName() << crlf;
+					str << "Attached to: bone #" << iBone << " (" << bone->name << ")" << crlf;
+					break;
+				}
+
+				case MESHPART_BOUNDINGBOX:
+				{
+					D3DXVECTOR3 bb1, bb2;
+					mesh->getBoundingBox(bb1, bb2);
+					str << fixed << setprecision(3);
+					str << "Min X: " << setw(8) << bb1.x << ",   Max X: " << setw(8) << bb2.x << crlf;
+					str << "Min Y: " << setw(8) << bb1.y << ",   Max Y: " << setw(8) << bb2.y << crlf;
+					str << "Min Z: " << setw(8) << bb1.z << ",   Max Z: " << setw(8) << bb2.z << crlf;
+					break;
+				}
+				}
+			}
+			else
+			{
+				const Material& material = mesh->getMaterial(mat);
+				unsigned int part = (id >> SHIFT_MATERIALPART) & MASK_MATERIALPART;
+				switch (part)
+				{
+				case MATERIALPART_INVALID:
+					// It's the effect itself
+					str << "Index: " << mat << crlf;
+					break;
+
+				case MATERIALPART_EFFECT:
+				{
+					int iParam  = (id >> SHIFT_PARAMETER) & MASK_PARAMETER;
+					if (iParam == PARAMETER_INVALID)
+					{
+						// It's the effect itself
+						str << "File:  " << material.effect.name << crlf;
+					}
+					else
+					{
+						printParameter(hEdit, iParam, material.effect.parameters[iParam], str);
+					}
+					break;
+				}
+
+				case MATERIALPART_VERTICES:
+				{
+					const Vertex* v = material.vertices;
+					str << fixed << setprecision(3);
+
+					str << " Index |          Position          |           Normal           |   Texture Coords  |          Tangent           |          Binormal          | Skin Indices |       Skin Weights      " << crlf;
+					str << "-------+----------------------------+----------------------------+-------------------+----------------------------+----------------------------+--------------+-------------------------" << crlf;
+					for (unsigned int i = 0; i < material.nVertices; i++, v++)
+					{
+						str << setw(6) << right << i << " | "; 
+						str << setw(8) << v->Position.x << " " << setw(8) << v->Position.y << " " << setw(8) << v->Position.z << " | ";
+						str << setw(8) << v->Normal.x   << " " << setw(8) << v->Normal.y   << " " << setw(8) << v->Normal.z   << " | ";
+						str << setw(8) << v->TexCoord.x << " " << setw(8) << v->TexCoord.y                                    << " | ";
+						str << setw(8) << v->Tangent.x  << " " << setw(8) << v->Tangent.y  << " " << setw(8) << v->Tangent.z  << " | ";
+						str << setw(8) << v->Binormal.x << " " << setw(8) << v->Binormal.y << " " << setw(8) << v->Binormal.z << " | ";
+						str << setw(2) << v->BoneIndices[0] << " " << setw(2) << v->BoneIndices[1] << " " << setw(2) << v->BoneIndices[2] << " " << setw(2) << v->BoneIndices[3] << "  | ";
+						str << setw(5) << v->BoneWeights[0] << " " << setw(5) << v->BoneWeights[1] << " " << setw(5) << v->BoneWeights[2] << " " << setw(5) << v->BoneWeights[3]; 
+						str << crlf;
+					}
+					break;
+				}
+
+				case MATERIALPART_TRIANGLES:
+				{
+					const uint16_t* t = material.indices;
+					str << " Index |    Vertex indices   " << crlf;
+					str << "-------+---------------------" << crlf;
+					for (unsigned int i = 0; i < material.nTriangles; i++, t += 3)
+					{
+						str << setw(6) << i << " | " << setw(6) << t[0] << " "  << setw(6) << t[1] << " "  << setw(6) << t[2] << crlf;
+					}
+					break;
+				}
+
+				case MATERIALPART_MAPPING:
+				{
+					str << " Skin | Bone | Bone Name" << crlf;
+					str << "------+------+----------------" << crlf;
+					for (unsigned int i = 0; i < material.boneMapping.size(); i++)
+					{
+						unsigned int iBone = material.boneMapping[i];
+						const Bone* bone   = model->getBone(iBone);
+						str << setw(5) << i << " | " << setw(4) << iBone << " | " << bone->name << crlf;
+					}
+					break;
+				}
+
+				case MATERIALPART_COLLISION:
+					break;
+				}
 			}
 		}
 	}
@@ -509,7 +525,7 @@ INT_PTR CALLBACK ModelDetailsDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				const Mesh* mesh = model->getMesh(i);
 
 				tvi.hParent          = NULL;
-				tvi.itemex.lParam    = MAKE_MESH_PART(i, MESHPART_INVALID);
+				tvi.itemex.lParam    = MAKE_MESH_PART(i, MESHPART_INFORMATION);
 				tvi.itemex.cChildren = 1;
 				string name = "Mesh: " + mesh->getName();
 				tvi.itemex.pszText = (char*)name.c_str();
@@ -523,21 +539,25 @@ INT_PTR CALLBACK ModelDetailsDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				TreeView_InsertItem(hTree1, &tvi);
 
 				// Add effects
-				tvi.hParent          = hMesh;
-				tvi.itemex.cChildren = 1;
-
-				for (unsigned int j = 0; j < mesh->getNumEffects(); j++)
+				for (unsigned int j = 0; j < mesh->getNumMaterials(); j++)
 				{
-					const Effect* effect = mesh->getEffect(j);
-					name = "Effect: " + effect->name;
+					const Material& material = mesh->getMaterial(j);
+					tvi.hParent          = hMesh;
+					tvi.itemex.cChildren = 1;
+					tvi.itemex.lParam    = MAKE_MATERIAL(i,j);
+					tvi.itemex.pszText   = "Material";
+					HTREEITEM hMaterial = TreeView_InsertItem(hTree1, &tvi);
+
+					name = "Effect: "+ material.effect.name;
+					tvi.hParent = hMaterial;
 					tvi.itemex.lParam  = MAKE_EFFECT(i,j);
 					tvi.itemex.pszText = (char*)name.c_str();
 					HTREEITEM hEffect = TreeView_InsertItem(hTree1, &tvi);
 
 					// Add parameters
-					for (size_t p = 0; p < effect->parameters.size(); p++)
+					for (size_t p = 0; p < material.effect.parameters.size(); p++)
 					{
-						const Parameter& param = effect->parameters[p];
+						const Parameter& param = material.effect.parameters[p];
 
 						tvi.hParent          = hEffect;
 						tvi.itemex.lParam    = MAKE_PARAMETER(i,j,p);
@@ -556,54 +576,54 @@ INT_PTR CALLBACK ModelDetailsDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 						HTREEITEM hParam = TreeView_InsertItem(hTree1, &tvi);
 					}
 					TreeView_Expand(hTree1, hEffect, TVE_EXPAND);
-				}
 
-				// Add vertex format
-				name = "Mesh data: " + mesh->getVertexFormat();
-				tvi.hParent          = hMesh;
-				tvi.itemex.lParam    = INVALID_ID;
-				tvi.itemex.cChildren = 1;
-				tvi.itemex.pszText   = (char*)name.c_str();
-				HTREEITEM hData = TreeView_InsertItem(hTree1, &tvi);
+					// Add vertex format
+					name = "Mesh data: " + material.vertexFormat;
+					tvi.hParent          = hMaterial;
+					tvi.itemex.lParam    = INVALID_ID;
+					tvi.itemex.cChildren = 1;
+					tvi.itemex.pszText   = (char*)name.c_str();
+					HTREEITEM hData = TreeView_InsertItem(hTree1, &tvi);
 
-				stringstream str1;
-				str1 << "Vertices (" << mesh->getNumVertices() << ")";
+					stringstream str1;
+					str1 << "Vertices (" << material.nVertices << ")";
 
-				tvi.hParent          = hData;
-				tvi.itemex.lParam    = MAKE_MESH_PART(i, MESHPART_VERTICES);
-				tvi.itemex.cChildren = 0;
-				name = str1.str();
-				tvi.itemex.pszText = (char*)name.c_str();
-				TreeView_InsertItem(hTree1, &tvi);
-
-				stringstream str2;
-				str2 << "Triangles (" << mesh->getNumTriangles() << ")";
-				name = str2.str();
-				tvi.itemex.lParam  = MAKE_MESH_PART(i, MESHPART_TRIANGLES);
-				tvi.itemex.pszText = (char*)name.c_str();
-				TreeView_InsertItem(hTree1, &tvi);
-
-				if (mesh->getNumBoneMappings() > 0)
-				{
-					stringstream str3;
-					str3 << "Bone mappings (" << mesh->getNumBoneMappings() << ")";
-					name = str3.str();
-					tvi.itemex.lParam    = MAKE_MESH_PART(i, MESHPART_MAPPING);
+					tvi.hParent          = hData;
+					tvi.itemex.lParam    = MAKE_MATERIAL_PART(i, j, MATERIALPART_VERTICES);
+					tvi.itemex.cChildren = 0;
+					name = str1.str();
 					tvi.itemex.pszText = (char*)name.c_str();
 					TreeView_InsertItem(hTree1, &tvi);
-				}
 
-				// Add collision tree
-				if (mesh->getCollisionTree())
-				{
-					tvi.hParent = hData;
-					tvi.itemex.cChildren = 0;
-					tvi.itemex.lParam    = MAKE_MESH_PART(i, MESHPART_COLLISION);
-					tvi.itemex.pszText   = "Collision tree";
+					stringstream str2;
+					str2 << "Triangles (" << material.nTriangles << ")";
+					name = str2.str();
+					tvi.itemex.lParam  = MAKE_MATERIAL_PART(i, j, MATERIALPART_TRIANGLES);
+					tvi.itemex.pszText = (char*)name.c_str();
 					TreeView_InsertItem(hTree1, &tvi);
-				}
 
-				TreeView_Expand(hTree1, hData, TVE_EXPAND);
+					if (material.boneMapping.size() > 0)
+					{
+						stringstream str3;
+						str3 << "Bone mappings (" << (unsigned int)material.boneMapping.size() << ")";
+						name = str3.str();
+						tvi.itemex.lParam    = MAKE_MATERIAL_PART(i, j, MATERIALPART_MAPPING);
+						tvi.itemex.pszText = (char*)name.c_str();
+						TreeView_InsertItem(hTree1, &tvi);
+					}
+
+					// Add collision tree
+					if (material.hasCollisionTree)
+					{
+						tvi.hParent = hData;
+						tvi.itemex.cChildren = 0;
+						tvi.itemex.lParam    = MAKE_MATERIAL_PART(i, j, MATERIALPART_COLLISION);
+						tvi.itemex.pszText   = "Collision tree";
+						TreeView_InsertItem(hTree1, &tvi);
+					}
+					TreeView_Expand(hTree1, hData, TVE_EXPAND);
+					TreeView_Expand(hTree1, hMaterial, TVE_EXPAND);
+				}
 				TreeView_Expand(hTree1, hMesh, TVE_EXPAND);
 			}
 			TreeView_Expand(hTree1, hBones, TVE_EXPAND);

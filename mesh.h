@@ -13,18 +13,10 @@ private:
 
 public:
 	// IMesh implementation
-	const Vertex*      getVertexBuffer()     const;
-	const uint16_t*    getIndexBuffer()      const;
-	unsigned long      getNumVertices()      const;
-	unsigned long      getNumTriangles()     const;
-	D3DFILLMODE        getFillMode()         const;
-	D3DCULL            getCulling()          const;
-	unsigned int       getNumEffects()       const;
-	const Effect*      getEffect(int index)  const;
-	const std::string& getVertexFormat()     const;
-	unsigned long      getBoneMapping(int i) const;
-	unsigned long      getNumBoneMappings()  const;
-	bool               getCollisionTree()    const;
+	D3DFILLMODE        getFillMode()          const;
+	D3DCULL            getCulling()           const;
+	unsigned int       getNumMaterials()      const;
+	const Material&    getMaterial(int index) const;
 
 	// Getters
 	const std::string& getName()  const;
@@ -32,9 +24,7 @@ public:
 	void               getBoundingBox(D3DXVECTOR3& v1, D3DXVECTOR3& v2) const;
 
 	// Setters
-	void setCollisionTree();
-	void addBoneMapping(unsigned long mapping);
-	void setVertexData(Vertex* vbuffer, uint16_t* ibuffer, unsigned long vertnum, unsigned long primnum, const std::string& format);
+	void addMaterial(const Material& material);
 	void setName(const std::string& name);
 	void setBoundingBox(const D3DXVECTOR3& v1, const D3DXVECTOR3& v2);
 	void addEffect(const Effect& effect);
