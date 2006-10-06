@@ -144,13 +144,16 @@ File* FileManager::getFile(string megafile, const string& path)
 File* FileManager::getFile(const string& path)
 {
 	// First see if we can open it physically
-	try
+	for (vector<string>::const_iterator base = basepaths.begin(); base != basepaths.end(); base++)
 	{
-		string filename = (path[1] != ':' && path[0] != '\\') ? basepath + path : path;
-		return new PhysicalFile(filename);
-	}
-	catch (IOException&)
-	{
+		try
+		{
+			string filename = (path[1] != ':' && path[0] != '\\') ? *base + path : path;
+			return new PhysicalFile(filename);
+		}
+		catch (IOException&)
+		{
+		}
 	}
 
 	// Search in the index
@@ -172,44 +175,47 @@ File* FileManager::getFile(const string& path)
 	return NULL;
 }
 
-FileManager::FileManager(const string& basepath)
+FileManager::FileManager(const vector<string>& basepaths)
 {
 	XMLTree xml;
-	this->basepath = basepath;
-	string filename = basepath + "Data\\MegaFiles.xml";
-	File* file = new PhysicalFile( filename );
-	xml.parse( file );
-	file->release();
-
-	const XMLNode* root = xml.getRoot();
-	if (root->getName() != "Mega_Files")
-	{
-		throw BadFileException( filename );
-	}
-
+	this->basepaths = basepaths;
 	try
 	{
-		// Create a file index from all mega files
-		for (unsigned int i = 0; i < root->getNumChildren(); i++)
+		for (vector<string>::const_iterator path = basepaths.begin(); path != basepaths.end(); path++)
 		{
-			const XMLNode* child = root->getChild(i);
-			if (child->getName() != "File")
+			string filename = *path + "Data\\MegaFiles.xml";
+			File* file = new PhysicalFile( filename );
+			xml.parse( file );
+			file->release();
+
+			const XMLNode* root = xml.getRoot();
+			if (root->getName() != "Mega_Files")
 			{
 				throw BadFileException( filename );
 			}
-	
-			MegaFile* megafile;
-			string filename = basepath + child->getData();
-			try
+
+			// Create a file index from all mega files
+			for (unsigned int i = 0; i < root->getNumChildren(); i++)
 			{
-				megafile = new MegaFile(new PhysicalFile(filename));
+				const XMLNode* child = root->getChild(i);
+				if (child->getName() != "File")
+				{
+					throw BadFileException( filename );
+				}
+		
+				MegaFile* megafile;
+				string filename = *path + child->getData();
+				try
+				{
+					megafile = new MegaFile(new PhysicalFile(filename));
+				}
+				catch (IOException)
+				{
+					continue;
+				}
+				transform(filename.begin(), filename.end(), filename.begin(), toupper);
+				megafiles.insert(make_pair(filename, megafile));
 			}
-			catch (IOException)
-			{
-				continue;
-			}
-			transform(filename.begin(), filename.end(), filename.begin(), toupper);
-			megafiles.insert(make_pair(filename, megafile));
 		}
 	}
 	catch (...)

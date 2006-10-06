@@ -30,8 +30,12 @@ class BoneAnimation
 {
 	friend class Animation::AnimationImpl;
 
+	int16_t		  translationBufferIndex;
+	int16_t		  rotationBufferIndex;
+
 	std::string   name;
 	unsigned long boneIndex;
+	D3DXVECTOR3   translationScale;
 	D3DXVECTOR3   translationOffset;
 	std::vector<D3DXQUATERNION> quaternions;
 	std::vector<D3DXVECTOR3>    translations;

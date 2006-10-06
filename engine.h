@@ -42,11 +42,11 @@ struct Vertex
 {
 	D3DXVECTOR3 Position;			//   0	00
 	D3DXVECTOR3 Normal;				//  12	0C
-	D3DXVECTOR2 TexCoord;			//  24  18
-	float       filler1[6];			//  32	20
+	D3DXVECTOR2 TexCoords[4];		//  24  18
 	D3DXVECTOR3 Tangent;			//  56	38
 	D3DXVECTOR3 Binormal;			//  68  44
-	float       filler2[8];			//  80  50
+	D3DXVECTOR4 Color;				//  80  50
+	float       filler[4];			//  96  60
 	DWORD       BoneIndices[4];		// 112	70
 	float       BoneWeights[4];		// 128  80
 };

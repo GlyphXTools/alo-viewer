@@ -77,9 +77,16 @@ INT_PTR CALLBACK SelectFileDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 						else if (ext == "ALA")
 						{
 							File* file = sfp->megaFile->getFile(i);
-							Animation* anim = new Animation( file, true );
-							show = isSuitedAnimation(anim, sfp->model);
-							delete anim;
+							try
+							{
+								Animation* anim = new Animation( file, true );
+								show = isSuitedAnimation(anim, sfp->model);
+								delete anim;
+							}
+							catch (...)
+							{
+								show = false;
+							}
 							file->release();
 						}
 
@@ -413,7 +420,7 @@ static void OnModelTreeSelect(HWND hTree, HWND hEdit, const TVITEM& item, const 
 						str << setw(6) << right << i << " | "; 
 						str << setw(8) << v->Position.x << " " << setw(8) << v->Position.y << " " << setw(8) << v->Position.z << " | ";
 						str << setw(8) << v->Normal.x   << " " << setw(8) << v->Normal.y   << " " << setw(8) << v->Normal.z   << " | ";
-						str << setw(8) << v->TexCoord.x << " " << setw(8) << v->TexCoord.y                                    << " | ";
+						str << setw(8) << v->TexCoords[0].x << " " << setw(8) << v->TexCoords[0].y                            << " | ";
 						str << setw(8) << v->Tangent.x  << " " << setw(8) << v->Tangent.y  << " " << setw(8) << v->Tangent.z  << " | ";
 						str << setw(8) << v->Binormal.x << " " << setw(8) << v->Binormal.y << " " << setw(8) << v->Binormal.z << " | ";
 						str << setw(2) << v->BoneIndices[0] << " " << setw(2) << v->BoneIndices[1] << " " << setw(2) << v->BoneIndices[2] << " " << setw(2) << v->BoneIndices[3] << "  | ";

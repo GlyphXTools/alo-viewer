@@ -65,6 +65,7 @@ MiniChunk::~MiniChunk()
 
 const char* MiniChunks::getChunk(unsigned char type, unsigned char& size) const
 {
+	size = 0;
 	for (size_t i = 0; i < chunks.size(); i++)
 	{
 		if (chunks[i].first.first == type)

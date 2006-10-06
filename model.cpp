@@ -33,6 +33,7 @@ class Model::ModelImpl
 	void readConnections(File* input);
 	void readConnectionsInfo(unsigned long& nConnections, unsigned long& nAttachments, File* input);
 	void readConnection(unsigned long& mesh, unsigned long& bone, File* input);
+	void readProxy(File* input);
 
 	ModelImpl(File* file);
 	~ModelImpl();
@@ -639,6 +640,45 @@ void Model::ModelImpl::readConnection(unsigned long& mesh, unsigned long& bone, 
 	}
 }
 
+void Model::ModelImpl::readProxy(File* input)
+{
+	int valid = 0;
+
+	string name;
+
+	while (!input->eof())
+	{
+		MiniChunk chunk(input);
+		File*     stream = chunk.getStream();
+
+		switch (chunk.getType())
+		{
+			case 5:
+				{
+				valid |= 1;
+				char* data = chunk.getData();
+				name = data;
+				delete[] data;
+				break;
+				}
+
+			case 6:	valid |= 2; break;
+			case 7:	valid |= 4; break;
+			case 8:	valid |= 8; break;
+
+			default:
+				throw BadFileException(input->getName());
+				break;
+		}
+		input->seek( chunk.getStart() + chunk.getSize() );
+	}
+
+	if ((valid & 3) != 3)
+	{
+		throw BadFileException(input->getName());
+	}
+}
+
 void Model::ModelImpl::readConnections(File* input)
 {
 	unsigned long nConnections = 0;
@@ -665,8 +705,7 @@ void Model::ModelImpl::readConnections(File* input)
 
 			case 0x0603:
 			{
-				// TODO: implement this, as soon as we figure out what the hell it is
-				// Maybe damage connections?
+				readProxy(stream);
 				break;
 			}
 

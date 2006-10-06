@@ -101,7 +101,7 @@ public:
 		return pTexture;
 	}
 
-	TextureManager(IFileManager* fileManager, const std::string& basePath)
+	TextureManager(IFileManager* fileManager, const string& basePath)
 	{
 		this->basePath		  = basePath;
 		this->fileManager	  = fileManager;
@@ -118,10 +118,10 @@ class EffectManager : public IEffectManager
 {
 	typedef map<string,ID3DXEffect*> EffectMap;
 
-	EffectMap     effects;
-	string        basePath;
-	IFileManager* fileManager;
-	ID3DXEffect*  pDefaultEffect;
+	EffectMap      effects;
+	string		   basePath;
+	IFileManager*  fileManager;
+	ID3DXEffect*   pDefaultEffect;
 
 	ID3DXEffect* load(IDirect3DDevice9* pDevice, const string& filename)
 	{
@@ -211,7 +211,7 @@ public:
 		return pEffect;
 	}
 
-	EffectManager(IFileManager* fileManager, const std::string& basePath)
+	EffectManager(IFileManager* fileManager, const string& basePath)
 	{
 		this->basePath       = basePath;
 		this->fileManager    = fileManager;
@@ -330,7 +330,7 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 							break;
 
 						case ID_HELP_ABOUT:
-							MessageBox(NULL, "Alamo Object Viewer, v0.4\n\nBy Mike Lankamp", "About", MB_OK );
+							MessageBox(NULL, "Alamo Object Viewer, v0.5\n\nBy Mike Lankamp", "About", MB_OK );
 							break;
 					}
 				}
@@ -646,30 +646,38 @@ static LRESULT CALLBACK RenderWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 }
 
 // Returns the install path by querying the registry, or an empty string when failed.
-static string getGamePath_Reg()
+static void getGamePath_Reg(vector<string>& strings)
 {
-	string str;
-	HKEY   hKey;
-	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\LucasArts\\Star Wars Empire at War\\1.0", 0, KEY_QUERY_VALUE, &hKey ) == ERROR_SUCCESS)
+	const char* paths[] = {
+		"Software\\LucasArts\\Star Wars Empire at War Forces of Corruption Demo\\1.0",
+		"Software\\LucasArts\\Star Wars Empire at War\\1.0",
+		""
+	};
+
+	for (int i = 0; paths[i][0] != '\0'; i++)
 	{
-		DWORD type, size = MAX_PATH;
-		char path[MAX_PATH];
-		if (RegQueryValueEx(hKey, "ExePath", NULL, &type, (LPBYTE)path, &size) == ERROR_SUCCESS)
+		HKEY hKey;
+		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, paths[i], 0, KEY_QUERY_VALUE, &hKey ) == ERROR_SUCCESS)
 		{
-			str = path;
-			size_t pos = str.find_last_of("\\");
-			if (pos != string::npos)
+			DWORD type, size = MAX_PATH;
+			char path[MAX_PATH];
+			if (RegQueryValueEx(hKey, "ExePath", NULL, &type, (LPBYTE)path, &size) == ERROR_SUCCESS)
 			{
-				str = str.substr(0, pos);
+				string str = path;
+				size_t pos = str.find_last_of("\\");
+				if (pos != string::npos)
+				{
+					str = str.substr(0, pos);
+				}
+				strings.push_back(str);
 			}
+			RegCloseKey(hKey);
 		}
-		RegCloseKey(hKey);
 	}
-	return str;
 }
 
-// Returns %PROGRAMFILES%\LucasArts\Star Wars Empire at War\GameData, or an empty string when failed.
-static string getGamePath_Shell()
+// Adds the %PROGRAMFILES%\LucasArts\Star Wars Empire at War\GameData paths to the vector
+static void getGamePath_Shell(vector<string>& strings)
 {
 	TCHAR path[MAX_PATH];
 	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, SHGFP_TYPE_CURRENT, path )))
@@ -677,27 +685,32 @@ static string getGamePath_Shell()
 		MessageBox(NULL, path, NULL, MB_OK );
 		string str = path;
 		if (*str.rbegin() != '\\') str += '\\';
-		return str + "LucasArts\\Star Wars Empire at War\\GameData";
+		
+		strings.push_back(str + "LucasArts\\Star Wars Empire at War Forces of Corruption Demo");
+		strings.push_back(str + "LucasArts\\Star Wars Empire at War\\GameData");
 	}
-	return "";
 }
 
 static FileManager* createFileManager( HWND hWnd, const vector<string>& argv )
 {
 	// Search for the Empire at War path
-	string EmpireAtWarPath;
+	vector<string> EmpireAtWarPaths;
 	if (argv.size() > 1)
 	{
 		// Override on the command line; use that
-		EmpireAtWarPath = argv[1];
+		for (size_t i = 1; i < argv.size(); i++)
+		{
+			EmpireAtWarPaths.push_back(argv[i]);
+		}
 	}
 	else
 	{
 		// First try the registry
-		if ((EmpireAtWarPath = getGamePath_Reg()) == "")
+		getGamePath_Reg(EmpireAtWarPaths);
+		if (EmpireAtWarPaths.empty())
 		{
 			// Then try the shell
-			EmpireAtWarPath = getGamePath_Shell();
+			getGamePath_Shell(EmpireAtWarPaths);
 		}
 		
 	}
@@ -705,12 +718,15 @@ static FileManager* createFileManager( HWND hWnd, const vector<string>& argv )
 
 	while (fileManager == NULL)
 	{
-		if (*EmpireAtWarPath.rbegin() != '\\') EmpireAtWarPath += '\\';
+		for (size_t i = 0; i < EmpireAtWarPaths.size(); i++)
+		{
+			if (*EmpireAtWarPaths[i].rbegin() != '\\') EmpireAtWarPaths[i] += '\\';
+		}
 
 		try
 		{
 			// Initialize the file manager
-			fileManager = new FileManager( EmpireAtWarPath );
+			fileManager = new FileManager( EmpireAtWarPaths );
 		}
 		catch (FileNotFoundException&)
 		{
@@ -719,7 +735,7 @@ static FileManager* createFileManager( HWND hWnd, const vector<string>& argv )
 			bi.hwndOwner      = hWnd;
 			bi.pidlRoot       = NULL;
 			bi.pszDisplayName = NULL;
-			bi.lpszTitle      = "Please select the GameData folder in the Star Wars Empire at War installation directory.";
+			bi.lpszTitle      = "Please select the Star Wars Empire at War or Forces of Corruption folder that contains the Data folder.";
 			bi.ulFlags        = BIF_RETURNONLYFSDIRS;
 			bi.lpfn           = NULL;
 			LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
@@ -732,7 +748,8 @@ static FileManager* createFileManager( HWND hWnd, const vector<string>& argv )
 			TCHAR path[MAX_PATH];
 			if (SHGetPathFromIDList( pidl, path ))
 			{
-				EmpireAtWarPath = path;
+				EmpireAtWarPaths.clear();
+				EmpireAtWarPaths.push_back(path);
 			}
 			CoTaskMemFree(pidl);
 		}

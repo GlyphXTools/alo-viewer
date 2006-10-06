@@ -139,7 +139,15 @@ Engine::EngineImpl::AnimatedModel::AnimatedModel(const Animation* anim, const Mo
 			D3DXMATRIX  translation;
 			D3DXVECTOR3 trans = ba.getTranslationOffset();
 
-			D3DXMatrixRotationQuaternion(&transform, &ba.getQuaternion( (ba.getNumQuaternions() > 1) ? frame : 0 ));
+			if (ba.getNumQuaternions() > 0)
+			{
+				D3DXMatrixRotationQuaternion(&transform, &ba.getQuaternion( (ba.getNumQuaternions() > 1) ? frame : 0 ));
+			}
+			else
+			{
+				D3DXMatrixIdentity(&transform);
+			}
+
 			if (ba.getNumTranslations() > 0)
 			{
 				trans += ba.getTranslation(frame);
@@ -285,7 +293,7 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 		{
 			data->Position = v->Position;
 			data->Normal   = D3DXVECTOR4(v->Normal.x, v->Normal.y, v->Normal.z, (float)v->BoneIndices[0] );
-			data->TexCoord = v->TexCoord * texScale;
+			data->TexCoord = v->TexCoords[0] * texScale;
 			data->Tangent  = v->Tangent;
 			data->Binormal = v->Binormal;
 		}
