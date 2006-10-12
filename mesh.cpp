@@ -7,6 +7,8 @@ class Mesh::MeshImpl
 {
 	friend Mesh;
 
+	bool				  hidden;
+	bool				  collisionEnabled;
 	int					  index;
 	std::string			  name;
 	vector<Material>	  materials;
@@ -39,6 +41,8 @@ const std::string& Mesh::getName()              const { return pimpl->name;   }
 int                Mesh::getIndex()             const { return pimpl->index;  }
 const Material&    Mesh::getMaterial(int index) const { return pimpl->materials[index]; }
 unsigned int       Mesh::getNumMaterials()      const { return (unsigned int)pimpl->materials.size(); }
+bool			   Mesh::isHidden()             const { return pimpl->hidden; }
+bool			   Mesh::isCollisionEnabled()   const { return pimpl->collisionEnabled; }
 
 void Mesh::getBoundingBox(D3DXVECTOR3& v1, D3DXVECTOR3& v2) const
 {
@@ -51,10 +55,9 @@ void Mesh::addMaterial(const Material& material)
 	pimpl->materials.push_back(material);
 }
 
-void Mesh::setName(const std::string& name)
-{
-	pimpl->name = name;
-}
+void Mesh::setName(const std::string& name)				{ pimpl->name = name; }
+void Mesh::setHidden(bool hidden)						{ pimpl->hidden = hidden; }
+void Mesh::setCollisionEnabled(bool collisionEnabled)	{ pimpl->collisionEnabled = collisionEnabled; }
 
 void Mesh::setBoundingBox(const D3DXVECTOR3& v1, const D3DXVECTOR3& v2)
 {

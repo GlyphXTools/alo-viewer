@@ -364,9 +364,11 @@ static void OnModelTreeSelect(HWND hTree, HWND hEdit, const TVITEM& item, const 
 					unsigned int iBone = model->getConnection(iMesh);
 					const Bone* bone   = model->getBone(iBone);
 
-					str << "Index:       " << iMesh << crlf;
-					str << "Name:        " << mesh->getName() << crlf;
-					str << "Attached to: bone #" << iBone << " (" << bone->name << ")" << crlf;
+					str << "Index:          " << iMesh << crlf;
+					str << "Name:           " << mesh->getName() << crlf;
+					str << "Attached to:    bone #" << iBone << " (" << bone->name << ")" << crlf;
+					str << "Hidden:         " << (mesh->isHidden() ? "yes" : "no") << crlf;
+					str << "Collision mesh: " << (mesh->isCollisionEnabled() ? "yes" : "no") << crlf;
 					break;
 				}
 

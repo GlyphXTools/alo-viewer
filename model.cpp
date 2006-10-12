@@ -389,7 +389,10 @@ void Model::ModelImpl::readMesh(Mesh& mesh, File* input)
 				}
 				char* data = chunk.getData();
 				nMaterials = letohl(*(uint32_t*)&data[0]);
-				mesh.setBoundingBox(
+
+				mesh.setHidden          (letohl(*(uint32_t*)&data[32]) != 0);
+				mesh.setCollisionEnabled(letohl(*(uint32_t*)&data[36]) != 0);
+				mesh.setBoundingBox     (
 					D3DXVECTOR3(*(float*)&data[ 4], *(float*)&data[ 8], *(float*)&data[12]),
 					D3DXVECTOR3(*(float*)&data[16], *(float*)&data[20], *(float*)&data[24]) );
 				delete[] data;

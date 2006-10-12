@@ -63,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
+				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib shlwapi.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="libs;&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Lib\x86&quot;"
@@ -142,7 +142,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib"
+				AdditionalDependencies="d3d9.lib d3dx9.lib dxerr9.lib libexpat.lib comctl32.lib shlwapi.lib"
 				OutputFile="$(OutDir)/AloViewer.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="libs;&quot;C:\Program Files\Microsoft DirectX SDK (August 2006)\Lib\x86&quot;"
@@ -206,7 +206,7 @@
 					>
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;"
+						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(OutDir)$(InputName).fxo"
 					/>
 				</FileConfiguration>
@@ -215,7 +215,7 @@
 					>
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;"
+						CommandLine="fxc /nologo /T fx_2_0 /Fo &quot;$(InputName).fxo&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(OutDir)$(InputName).fxo"
 					/>
 				</FileConfiguration>
@@ -332,14 +332,6 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-			<File
-				RelativePath=".\bin3001.bin"
-				>
-			</File>
-			<File
-				RelativePath=".\bin3002.bin"
-				>
-			</File>
 			<File
 				RelativePath=".\logo.ico"
 				>

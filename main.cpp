@@ -9,6 +9,8 @@
 using namespace std;
 
 #include <shlobj.h>
+#include <shlwapi.h>
+#include <shellapi.h>
 #include <afxres.h>
 #include "resource.h"
 
@@ -283,6 +285,38 @@ static void onAnimationLoaded( ApplicationInfo* info, Animation* anim )
 	UpdateWindow(info->hRenderWnd);
 }
 
+static bool LoadModel( ApplicationInfo* info, const string& filename )
+{
+	try
+	{
+		File*  file  = new PhysicalFile(filename);
+		Model* model = new Model(file);
+		file->release();
+		onModelLoaded(info, model);
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+static bool LoadAnimation( ApplicationInfo* info, const string& filename )
+{
+	try
+	{
+		File*      file = new PhysicalFile(filename);
+		Animation* anim = new Animation(file);
+		file->release();
+		onAnimationLoaded(info, anim);
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
 static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	ApplicationInfo* info = (ApplicationInfo*)(LONG_PTR)GetWindowLongPtr(hWnd, GWL_USERDATA);
@@ -330,7 +364,7 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 							break;
 
 						case ID_HELP_ABOUT:
-							MessageBox(NULL, "Alamo Object Viewer, v0.5\n\nBy Mike Lankamp", "About", MB_OK );
+							MessageBox(NULL, "Alamo Object Viewer, v0.6\n\nBy Mike Lankamp", "About", MB_OK );
 							break;
 					}
 				}
@@ -641,6 +675,43 @@ static LRESULT CALLBACK RenderWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 		case WM_SETFOCUS:
 			// Yes, we want focus please
 			return 0;
+
+		case WM_DROPFILES:
+		{
+			// User dropped a filename on the window
+			HDROP hDrop = (HDROP)wParam;
+			UINT nFiles = DragQueryFile(hDrop, -1, NULL, 0);
+			bool model  = false, animation = false;
+			for (UINT i = 0; i < nFiles; i++)
+			{
+				UINT size = DragQueryFile(hDrop, i, NULL, 0);
+				string filename(size,' ');
+				DragQueryFile(hDrop, i, (LPSTR)filename.c_str(), size + 1);
+
+				const char* ext = PathFindExtension(filename.c_str());
+				if (*ext != '\0')
+				{
+					if (!model && _stricmp(ext,".alo") == 0)
+					{
+						if (!LoadModel(info, filename))
+						{
+							MessageBox(NULL, "Unable to open the specified model", NULL, MB_OK | MB_ICONHAND );
+						}
+						model = true;
+					}
+					else if (!animation && _stricmp(ext,".ala") == 0)
+					{
+						if (!LoadAnimation(info, filename))
+						{
+							MessageBox(NULL, "Unable to open the specified animation", NULL, MB_OK | MB_ICONHAND );
+						}
+						animation = true;
+					}
+				}
+			}
+			DragFinish(hDrop);
+			break;
+		}
 	}
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
@@ -700,10 +771,14 @@ static FileManager* createFileManager( HWND hWnd, const vector<string>& argv )
 		// Override on the command line; use that
 		for (size_t i = 1; i < argv.size(); i++)
 		{
-			EmpireAtWarPaths.push_back(argv[i]);
+			if (PathIsDirectory(argv[i].c_str()))
+			{
+				EmpireAtWarPaths.push_back(argv[i]);
+			}
 		}
 	}
-	else
+
+	if (EmpireAtWarPaths.empty())
 	{
 		// First try the registry
 		getGamePath_Reg(EmpireAtWarPaths);
@@ -778,6 +853,19 @@ void main( ApplicationInfo* info, const vector<string>& argv )
 		info->fileManager    = fileManager;
 		info->effectManager  = &effectManager;
 		info->textureManager = &textureManager;
+
+		// See if a file was specified
+		for (size_t i = 1; i < argv.size(); i++)
+		{
+			if (PathFileExists(argv[i].c_str()) && !PathIsDirectory(argv[i].c_str()))
+			{
+				if (!LoadModel(info, argv[i]))
+				{
+					MessageBox(NULL, "Unable to open the specified model", NULL, MB_OK | MB_ICONHAND );
+				}
+				break;
+			}
+		}
 
 		// Message loop
 		ShowWindow(info->hMainWnd, SW_SHOW);
@@ -892,7 +980,7 @@ static void CreateMainWindow( ApplicationInfo* info )
 			if (info->hColorBtn[i] == NULL) throw 0;
 		}
 
-		info->hRenderWnd = CreateWindowEx(WS_EX_CLIENTEDGE, "AloRenderWindow", "", WS_CHILD | WS_VISIBLE,
+		info->hRenderWnd = CreateWindowEx(WS_EX_CLIENTEDGE | WS_EX_ACCEPTFILES, "AloRenderWindow", "", WS_CHILD | WS_VISIBLE,
 			200, 40, client.right - 200, client.bottom - 70, info->hMainWnd, NULL, info->hInstance, NULL);
 		if (info->hRenderWnd == NULL) throw 0;
 

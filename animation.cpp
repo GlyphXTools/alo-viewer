@@ -58,8 +58,8 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 				if (!infoOnly)
 				{
 					// Read base matrix
-					unsigned char matsize[8];
-					const char*   matdata[8];
+					unsigned char matsize[9];
+					const char*   matdata[9];
 					matdata[0] = chunks.getChunk(6,  matsize[0]);
 					matdata[1] = chunks.getChunk(7,  matsize[1]);
 					matdata[2] = chunks.getChunk(8,  matsize[2]);
@@ -76,6 +76,7 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 					}
 					memcpy(&animation.translationOffset, matdata[0], 3 * sizeof(float));
 					memcpy(&animation.translationScale,  matdata[1], 3 * sizeof(float));
+
 					if (isFoC)
 					{
 						animation.translationBufferIndex = *(int16_t*)matdata[4];
@@ -147,9 +148,11 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 			}
 
 			case 0x1007:
+				// Visibility track, 1 bit per frame
 				break;
 
 			case 0x1008:
+				// Unknown track, 1 bit per frame
 				break;
 
 			default:
