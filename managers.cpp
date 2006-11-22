@@ -99,7 +99,7 @@ File* MegaFile::getFile(std::string path) const
 				{
 					if (filenames[ files[mid].nameIndex ] == path)
 					{
-						return new SubFile(file, files[mid].start, files[mid].size );
+						return new SubFile(file, path, files[mid].start, files[mid].size );
 					}
 				}
 				break;				
@@ -117,7 +117,7 @@ File* MegaFile::getFile(std::string path) const
 
 File* MegaFile::getFile(int index) const
 {
-	return new SubFile(file, files[index].start, files[index].size );
+	return new SubFile(file, getFilename(index), files[index].start, files[index].size );
 }
 
 const string& MegaFile::getFilename(int index) const
@@ -128,19 +128,6 @@ const string& MegaFile::getFilename(int index) const
 //
 // FileManager class
 //
-File* FileManager::getFile(string megafile, const string& path)
-{
-	File* file = NULL;
-	transform(megafile.begin(), megafile.end(), megafile.begin(), toupper);
-	map<string,MegaFile*>::iterator i = megafiles.find(megafile);
-	if (i != megafiles.end())
-	{
-		file = i->second->getFile( path );
-	}
-
-	return NULL;
-}
-
 File* FileManager::getFile(const string& path)
 {
 	// First see if we can open it physically
@@ -159,9 +146,9 @@ File* FileManager::getFile(const string& path)
 	// Search in the index
 	try
 	{
-		for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+		for (vector<MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
 		{
-			File* file = i->second->getFile( path );
+			File* file = (*i)->getFile( path );
 			if (file != NULL)
 			{
 				return file;
@@ -203,26 +190,22 @@ FileManager::FileManager(const vector<string>& basepaths)
 					throw BadFileException( filename );
 				}
 		
-				MegaFile* megafile;
 				string filename = *path + child->getData();
 				try
 				{
-					megafile = new MegaFile(new PhysicalFile(filename));
+					megafiles.push_back( new MegaFile(new PhysicalFile(filename)) );
 				}
 				catch (IOException)
 				{
-					continue;
 				}
-				transform(filename.begin(), filename.end(), filename.begin(), toupper);
-				megafiles.insert(make_pair(filename, megafile));
 			}
 		}
 	}
 	catch (...)
 	{
-		for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+		for (vector<MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
 		{
-			delete i->second;
+			delete *i;
 		}
 		throw;
 	}
@@ -230,9 +213,9 @@ FileManager::FileManager(const vector<string>& basepaths)
 
 FileManager::~FileManager()
 {
-	for (map<string,MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
+	for (vector<MegaFile*>::iterator i = megafiles.begin(); i != megafiles.end(); i++)
 	{
-		delete i->second;
+		delete *i;
 	}
 }
 

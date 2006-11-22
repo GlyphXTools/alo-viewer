@@ -27,7 +27,7 @@ Chunk::Chunk(File* input)
 	type   = letohl(type);
 	size   = letohl(size);
 	start  = input->tell();
-	stream = new SubFile(input, start, getSize());
+	stream = new SubFile(input, "", start, getSize());
 }
 
 Chunk::~Chunk()
@@ -55,7 +55,7 @@ MiniChunk::MiniChunk(File* input)
 		throw IOException("Unable to read chunk header");
 	}
 	start  = input->tell();
-	stream = new SubFile(input, start, getSize());
+	stream = new SubFile(input, "", start, getSize());
 }
 
 MiniChunk::~MiniChunk()

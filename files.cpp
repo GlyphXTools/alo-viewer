@@ -134,7 +134,7 @@ unsigned long SubFile::read( void* buffer, unsigned long count )
 	return count;
 }
 
-SubFile::SubFile(File* file, unsigned long start, unsigned long size) : File(file->getName())
+SubFile::SubFile(File* file, const std::string& filename, unsigned long start, unsigned long size) : File(file->getName() + "|" + filename)
 {
 	this->file   = file;
 	this->offset = 0;

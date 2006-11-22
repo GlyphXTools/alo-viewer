@@ -86,8 +86,6 @@ public:
 	// Get the vertex and index buffer, respectively
 	virtual const Material&    getMaterial(int i) const = 0;
 	virtual unsigned int       getNumMaterials()  const = 0;
-	virtual D3DFILLMODE        getFillMode()      const = 0;
-	virtual D3DCULL            getCulling()       const = 0;
 	virtual ~IMesh() {}
 };
 
@@ -105,6 +103,21 @@ enum RenderMode
 	RM_WIREFRAME,
 };
 
+enum LightType
+{
+	LT_SUN,
+	LT_FILL1,
+	LT_FILL2,
+};
+
+struct LIGHT
+{
+	D3DXVECTOR4 Diffuse;
+	D3DXVECTOR4 Specular;
+	D3DXVECTOR3 Position;
+	D3DXVECTOR3 Direction;
+};
+
 class Engine
 {
 private:
@@ -117,13 +130,21 @@ public:
 	Model*        getModel() const;
 	Animation*    getAnimation() const;
 	RenderMode    getRenderMode() const;
+	COLORREF      getBackground() const;
 
 	// Setters
-	void       setRenderMode( RenderMode mode );
-	void       setCamera( const Camera& camera );
-	void       setModel(Model* model);
-	void       applyAnimation(const Animation* animation);
-	void       enableMesh(unsigned int index, bool enabled);
+	void setRenderMode( RenderMode mode );
+	void setCamera( const Camera& camera );
+	void setModel(Model* model);
+	void applyAnimation(const Animation* animation);
+	void enableMesh(unsigned int index, bool enabled);
+	void setGroundVisibility(bool visible);
+	
+	void setBackground(COLORREF color);
+	void setLight(LightType which, const LIGHT& light);
+	void setAmbient(const D3DXVECTOR4& color);
+	void setShadow(const D3DXVECTOR4& color);
+	void setWind(const D3DXVECTOR3& wind);
 
 	// Actions
 	bool render(unsigned int frame, const RENDERINFO& ri);

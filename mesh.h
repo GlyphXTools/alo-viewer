@@ -13,8 +13,6 @@ private:
 
 public:
 	// IMesh implementation
-	D3DFILLMODE        getFillMode()          const;
-	D3DCULL            getCulling()           const;
 	unsigned int       getNumMaterials()      const;
 	const Material&    getMaterial(int index) const;
 

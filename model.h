@@ -18,11 +18,26 @@
 
 class Mesh;
 
+enum BillboardType
+{
+	BT_DISABLE,
+	BT_PARALLEL,
+	BT_FACE,
+	BT_ZAXIS_VIEW,
+	BT_ZAXIS_LIGHT,
+	BT_ZAXIS_WIND,
+	BT_SUNLIGHT_GLOW,
+	BT_SUN,
+};
+
 struct Bone
 {
-	std::string name;
-	int         parent;
-	D3DXMATRIX  matrix;
+	std::string   name;
+	int           parent;
+	D3DXMATRIX    matrix;
+	bool          visible;
+	BillboardType billboardType;
+		
 	std::vector<D3DXMATRIX> skin;
 };
 
@@ -42,6 +57,8 @@ public:
 	unsigned int getNumBones() const;
 	const Bone*  getBone(std::string name) const;
 	const Bone*  getBone(int bone) const;
+
+	const std::string& getName() const;
 
 	// Returns a transformation matrix for the specified mesh.
 	// This matrix translates the mesh from its local origin to its proper location

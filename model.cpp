@@ -16,6 +16,7 @@ class Model::ModelImpl
 {
 	friend class Model;
 
+	string							name;
 	unsigned long                   nLights;
 	vector<Mesh*>                   meshes;
 	map<string,size_t>              meshMap;
@@ -451,7 +452,9 @@ void Model::ModelImpl::readBone(Bone& bone, File* input)
 					throw BadFileException(input->getName());
 				}
 				char* data = chunk.getData();
-				bone.parent = letohl(*(uint32_t*)&data[0]);
+				bone.parent  = letohl(*(uint32_t*)&data[0]);
+				bone.visible = letohl(*(uint32_t*)&data[4]) != 0;
+				bone.billboardType = BT_DISABLE;
 				memset(&bone.matrix, 0, sizeof(D3DXMATRIX));
 				memcpy(&bone.matrix, data + 8, chunk.getSize() - 8);
 				bone.matrix[15] = 1.0f;
@@ -471,6 +474,8 @@ void Model::ModelImpl::readBone(Bone& bone, File* input)
 				}
 				char* data = chunk.getData();
 				bone.parent = letohl(*(uint32_t*)&data[0]);
+				bone.visible = letohl(*(uint32_t*)&data[4]) != 0;
+				bone.billboardType = (BillboardType)letohl(*(uint32_t*)&data[8]);
 				memset(&bone.matrix, 0, sizeof(D3DXMATRIX));
 				memcpy(&bone.matrix, data + 12, chunk.getSize() - 12);
 				bone.matrix[15] = 1.0f;
@@ -661,6 +666,10 @@ void Model::ModelImpl::readProxy(File* input)
 				valid |= 1;
 				char* data = chunk.getData();
 				name = data;
+				if (name.find("ALT") != string::npos && name.find("LOD") != string::npos)
+				{
+					printf("%s\n", name.c_str());
+				}
 				delete[] data;
 				break;
 				}
@@ -766,15 +775,8 @@ void Model::ModelImpl::readModel(File* input)
 				readConnections(stream);
 				break;
 
-			case 0x900:
-				// TODO: implement this as soon as we figure out what the hell it is
-				// Seems to be a particle, from P_XXXXX files. Irrelevant to models.
-				break;
-
 			case 0x1300:
-				// TODO: implement this as soon as we figure out what the hell it is
-				// Seems to be a light source
-				// Ignore it for now, but count it as part of the connectables
+				// We ignore lights, but count it as part of the connectables
 				nLights++;
 				break;
 
@@ -788,6 +790,7 @@ void Model::ModelImpl::readModel(File* input)
 
 Model::ModelImpl::ModelImpl(File* file)
 {
+	name      = file->getName();
 	readModel(file);
 }
 
@@ -856,6 +859,11 @@ bool Model::getBoneTransformation(int bone, D3DXMATRIX& matrix ) const
 		bone = pimpl->bones[bone].parent;
 	}
 	return true;
+}
+
+const string& Model::getName() const
+{
+	return pimpl->name;
 }
 
 Model::Model(File* file) : pimpl(new ModelImpl(file))

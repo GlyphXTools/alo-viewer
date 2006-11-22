@@ -15,7 +15,7 @@ public:
 	void addRef();
 	void release();
 
-	const std::string getName() const { return name; }
+	const std::string getName()   const { return name; }
 	virtual bool              eof() = 0;
 	virtual unsigned long     getSize() = 0;
 	virtual void              seek(unsigned long offset) = 0;
@@ -31,11 +31,9 @@ class PhysicalFile : public File
 
 	Handle*       handle;
 	unsigned long offset;
-	std::string   name;
 
 	~PhysicalFile();
 public:
-	const std::string& getName() const { return name; }
 	bool               eof();
 	unsigned long      getSize();
 	void               seek(unsigned long offset);
@@ -62,7 +60,7 @@ public:
 	unsigned long tell();
 	unsigned long read( void* buffer, unsigned long count );
 
-	SubFile(File* file, unsigned long start, unsigned long size);
+	SubFile(File* file, const std::string& filename, unsigned long start, unsigned long size);
 };
 
 #endif

@@ -58,11 +58,10 @@ public:
 //
 class FileManager : public IFileManager
 {
-	std::vector<std::string>        basepaths;
-	std::map<std::string,MegaFile*> megafiles;
+	std::vector<std::string> basepaths;
+	std::vector<MegaFile*>	 megafiles;
 
 public:
-	File* getFile(std::string megafile, const std::string& path);
 	File* getFile(const std::string& path);
 	FileManager(const std::vector<std::string>& basepaths);
 	~FileManager();

@@ -22,14 +22,18 @@ struct ApplicationInfo
 
 	HWND hColorsLabel;
 	HWND hColorBtn[NUM_COLORS + 1];
+	HWND hBackgroundBtn;
+	HWND hBackgroundLabel;
+
 	HWND hMainWnd;
-	HWND hBonesCheckbox;
-	HWND hNamesCheckbox;
-	HWND hWireframeCheckbox;
+	HWND hSettings;
 	HWND hListBox;
 	HWND hRenderWnd;
 	HWND hTimeSlider;
 	HWND hPlayButton;
+	HWND hConsole;
+
+	std::map<ULONGLONG, std::string> history;
 
 	int                   selectedColor;
 	bool			      playing;
@@ -37,6 +41,7 @@ struct ApplicationInfo
 	unsigned int          playStartFrame;
 
 	Animation*            anim;
+	Model*                model;
 	Engine*               engine;
 	class FileManager*    fileManager;
 	class EffectManager*  effectManager;
@@ -51,6 +56,8 @@ struct ApplicationInfo
 	ApplicationInfo()
 	{
 		hMainWnd     = hListBox = hRenderWnd = NULL;
+		anim         = NULL;
+		model        = NULL;
 		dragmode     = NONE;
 	}
 

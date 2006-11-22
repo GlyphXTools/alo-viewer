@@ -121,6 +121,45 @@ BEGIN
     EDITTEXT        IDC_EDIT1,203,20,182,225,ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
 END
 
+IDD_SETTINGS DIALOGEX 0, 0, 169, 138
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "Show bones",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,11,55,10
+    CONTROL         "Show bone names",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,82,11,74,10
+    CONTROL         "Show ground",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,22,58,10
+    CONTROL         "Show wireframe",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,82,22,67,10
+    CONTROL         "",IDC_SPINNER1,"Spinner",WS_TABSTOP,25,56,33,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER2,"Spinner",WS_TABSTOP,60,56,40,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER3,"Spinner",WS_TABSTOP,102,56,39,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER4,"Spinner",WS_TABSTOP,25,69,33,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER5,"Spinner",WS_TABSTOP,60,69,40,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER6,"Spinner",WS_TABSTOP,102,69,39,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER7,"Spinner",WS_TABSTOP,25,82,33,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER8,"Spinner",WS_TABSTOP,60,82,40,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER9,"Spinner",WS_TABSTOP,102,82,39,12,WS_EX_CLIENTEDGE
+    CONTROL         "",IDC_SPINNER10,"Spinner",WS_TABSTOP,60,95,40,12,WS_EX_CLIENTEDGE
+    GROUPBOX        "Nature",IDC_STATIC,0,39,169,99
+    LTEXT           "Sun:",IDC_STATIC,5,58,16,8
+    LTEXT           "Intensity",IDC_STATIC,27,46,30,8
+    LTEXT           "Z Angle",IDC_STATIC,69,46,25,8
+    LTEXT           "Tilt",IDC_STATIC,117,46,10,8
+    LTEXT           "Shadow:",IDC_STATIC,110,97,29,8
+    LTEXT           "Wind:",IDC_STATIC,5,97,20,8
+    LTEXT           "Fill 1:",IDC_STATIC,5,71,18,8
+    LTEXT           "Fill 2:",IDC_STATIC,5,84,18,8
+    LTEXT           "Diffuse",IDC_STATIC,143,46,24,8
+    GROUPBOX        "Options",IDC_STATIC,0,0,169,38
+    CONTROL         "",IDC_COLOR1,"ColorButton",0x0,143,56,21,12
+    CONTROL         "",IDC_COLOR2,"ColorButton",0x0,143,69,21,12
+    CONTROL         "",IDC_COLOR3,"ColorButton",0x0,143,82,21,12
+    CONTROL         "",IDC_COLOR4,"ColorButton",0x0,143,95,21,12
+    LTEXT           "Ambient:",IDC_STATIC,109,124,30,8
+    CONTROL         "",IDC_COLOR5,"ColorButton",0x0,143,108,21,12
+    LTEXT           "Specular:",IDC_STATIC,108,110,31,8
+    CONTROL         "",IDC_COLOR6,"ColorButton",0x0,143,122,21,12
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -194,7 +233,6 @@ IDB_MISSING             BITMAP                  "missing.bmp"
 //
 
 IDS_DEFAULT             300                     "default.fxo"
-
 #endif    // Dutch (Netherlands) resources
 /////////////////////////////////////////////////////////////////////////////
 

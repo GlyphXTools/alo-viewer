@@ -1,12 +1,24 @@
 #include <iostream>
 #include <set>
+#include <list>
+#include "log.h"
 #include "engine.h"
 #include "exceptions.h"
+#include "SphericalHarmonics.h"
 using namespace std;
 
 class Engine::EngineImpl
 {
 	friend class Engine;
+
+	typedef int RenderPhase;
+	static const RenderPhase PHASE_TERRAIN_MESH	= 0;
+	static const RenderPhase PHASE_OPAQUE		= 1;
+	static const RenderPhase PHASE_TRANSPARENT	= 2;
+	static const RenderPhase PHASE_OCCLUDED		= 3;
+	static const RenderPhase PHASE_HEAT			= 4;
+	static const RenderPhase PHASE_SHADOW		= 5;
+	static const RenderPhase NUM_PHASES			= 6;
 
 	class AnimatedModel
 	{
@@ -23,23 +35,35 @@ class Engine::EngineImpl
 		~AnimatedModel();
 	};
 
+	class MeshInfo;
+
 	struct D3DXMaterial
 	{
+		D3DXMaterial*		  next;
+
 		ID3DXEffect*		  pEffect;
+		int					  index;		// Index in the mesh
+		int					  iMeshInfo;	// Index of MeshInfo
+		RenderPhase			  phase;
+		bool				  zSort;
 		ID3DXMesh*            pMesh;
 		vector<unsigned long> boneMapping;
 
 		D3DXMaterial()
 		{
-			pMesh   = NULL;
-			pEffect = NULL;
+			pMesh     = NULL;
+			pEffect   = NULL;
 		}
 
 		D3DXMaterial& operator =(const D3DXMaterial& mat)
 		{
 			if (pMesh != NULL) pMesh->Release();
 			pMesh       = mat.pMesh;
+			index       = mat.index;
+			iMeshInfo   = mat.iMeshInfo;
 			pEffect     = mat.pEffect;
+			phase       = mat.phase;
+			zSort       = mat.zSort;
 			boneMapping = mat.boneMapping;
 			if (pMesh != NULL) pMesh->AddRef();
 			return *this;
@@ -47,10 +71,8 @@ class Engine::EngineImpl
 
 		D3DXMaterial(const D3DXMaterial& mat)
 		{
-			pMesh       = mat.pMesh;
-			pEffect     = mat.pEffect;
-			boneMapping = mat.boneMapping;
-			if (pMesh != NULL) pMesh->AddRef();
+			pMesh = NULL;
+			*this = mat;
 		}
 
 		~D3DXMaterial()
@@ -62,6 +84,8 @@ class Engine::EngineImpl
 	class MeshInfo
 	{
 		bool				 enabled;
+		int					 index;		// Index in the model
+		bool				 fixedFunction;
 		const IMesh*         pMesh;
 		IDirect3DDevice9*    pDevice;
 		const Model*         pModel;
@@ -71,29 +95,40 @@ class Engine::EngineImpl
 		void checkMaterial(int i);
 
 	public: 
-		bool                isEnabled() const         { return enabled; }
-		void                enable(bool enabled)      { this->enabled = enabled; }
-		unsigned int        getNumMaterials()         { return (unsigned int)materials.size(); }
-		const D3DXMaterial* getMaterial(int i)        { checkMaterial(i); return &materials[i]; }
-		const IMesh*        getIMesh() const          { return pMesh; }
+		int			  getIndex() const	   { return index; }
+		bool          isEnabled() const    { return enabled; }
+		void          enable(bool enabled) { this->enabled = enabled; }
+		unsigned int  getNumMaterials()    { return (unsigned int)materials.size(); }
+		D3DXMaterial* getMaterial(int i)   { checkMaterial(i); return &materials[i]; }
+		const IMesh*  getIMesh() const     { return pMesh; }
 
 		void invalidate();
 
-		MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled = false);
+		MeshInfo& operator =(const MeshInfo& meshinfo);
+		MeshInfo(const MeshInfo& meshinfo);
+		MeshInfo(int index, IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled = false);
 		~MeshInfo();
 	};
 
 	struct Settings
 	{
-		D3DXMATRIX  World;
-		D3DXMATRIX  View;
-		D3DXMATRIX  Projection;
-		Camera      Eye;
-		RenderMode  renderMode;
-		D3DLIGHT9   Lights[1];
+		D3DXMATRIX	View;
+		D3DXMATRIX	Projection;
+		D3DXMATRIX  ViewProjection;
+		Camera		Eye;
+		RenderMode	renderMode;
+		bool		isGroundVisible;
+		
+		LIGHT		Lights[3];
+		COLORREF	Background;
+		D3DXVECTOR3 Wind;
+		D3DXVECTOR4 Ambient;
+		D3DXVECTOR4 Shadow;
+		D3DXMATRIX  SPH_Light_Fill[3];
+		D3DXMATRIX  SPH_Light_All [3];
 	};
 
-	D3DPRESENT_PARAMETERS        dpp;
+	D3DPRESENT_PARAMETERS        PresentationParameters;
 	Settings                     settings;
 
 	IDirect3D9*					 pD3D;
@@ -107,12 +142,15 @@ class Engine::EngineImpl
 
 	std::vector<MeshInfo> meshes;
 
-	void composeParametersTable(std::map<std::string,Parameter>& parameters);
 	void setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, const Parameter& param);
 	void setCamera( const Camera& camera );
+	void doBillboard(const Bone* pBone, D3DXMATRIX& world, D3DXMATRIX& viewInv);
 
 	bool render(unsigned int frame, const RENDERINFO& ri);
 	void reinitialize( HWND hWnd, int width, int height );
+
+	D3DFORMAT GetDepthStencilFormat(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat);
+	void	  GetMultiSampleType(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT DisplayFormat);
 
 	EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffectManager* effectManager);
 	~EngineImpl();
@@ -221,6 +259,18 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 			D3DXEFFECT_DESC desc;
 			pEffect->GetDesc(&desc);
 
+			// Read some properties (phase & Z-Sort)
+			LPCSTR strPhase;
+			BOOL  zSort;
+			pEffect->GetString("_ALAMO_RENDER_PHASE", &strPhase);
+			pEffect->GetBool("_ALAMO_Z_SORT", &zSort);
+			static const char* Phases[NUM_PHASES] = {"TerrainMesh", "Opaque", "Transparent", "Occluded", "Heat", "Shadow"};
+			int phase;
+			for (phase = 0; phase < NUM_PHASES && _stricmp(strPhase, Phases[phase]) != 0; phase++);
+			materials[i].phase = (phase < NUM_PHASES) ? phase : 0;
+			materials[i].zSort = (zSort != FALSE);
+
+			// Read techniques
 			const char* LODs[] = {"DX9", "DX8", "DX8ATI", "FIXEDFUNCTION"};
 			for (unsigned int lod = 0; lod < 4 && hTechnique == NULL; lod++)
 			{
@@ -228,20 +278,23 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 				{
 					D3DXTECHNIQUE_DESC tdesc;
 					D3DXHANDLE hTech = pEffect->GetTechnique(i);
-					pEffect->GetTechniqueDesc(hTech, &tdesc );
-					for (unsigned int j = 0; j < tdesc.Annotations; j++)
+					if (SUCCEEDED(pEffect->ValidateTechnique(hTech)))
 					{
-						D3DXPARAMETER_DESC adesc;
-						D3DXHANDLE hAnn = pEffect->GetAnnotation(hTech, j);
-						pEffect->GetParameterDesc(hAnn, &adesc);
-						if (strcmp(adesc.Name,"LOD") == 0)
+						pEffect->GetTechniqueDesc(hTech, &tdesc );
+						for (unsigned int j = 0; j < tdesc.Annotations; j++)
 						{
-							const char* value;
-							pEffect->GetString(hAnn, &value);
-							if (strcmp(value, LODs[lod]) == 0)
+							D3DXPARAMETER_DESC adesc;
+							D3DXHANDLE hAnn = pEffect->GetAnnotation(hTech, j);
+							pEffect->GetParameterDesc(hAnn, &adesc);
+							if (strcmp(adesc.Name,"LOD") == 0)
 							{
-								hTechnique = hTech;
-								break;
+								const char* value;
+								pEffect->GetString(hAnn, &value);
+								if (strcmp(value, LODs[lod]) == 0)
+								{
+									hTechnique = hTech;
+									break;
+								}
 							}
 						}
 					}
@@ -261,6 +314,7 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 			{0,  28, D3DDECLTYPE_FLOAT2,   0, D3DDECLUSAGE_TEXCOORD, 0},
 			{0,  36, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_TANGENT,  0},
 			{0,  48, D3DDECLTYPE_FLOAT3,   0, D3DDECLUSAGE_BINORMAL, 0},
+			{0,  60, D3DDECLTYPE_FLOAT4,   0, D3DDECLUSAGE_COLOR   , 0},
 			D3DDECL_END()
 		};
 
@@ -272,10 +326,9 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 			D3DXVECTOR2 TexCoord;
 			D3DXVECTOR3 Tangent;
 			D3DXVECTOR3 Binormal;
+			D3DXVECTOR4 Color;
 		};
 		#pragma pack()
-
-		const string& format = material.vertexFormat;
 
 		HRESULT hErr;
 		if (FAILED(hErr = D3DXCreateMesh(material.nTriangles, material.nVertices, D3DXMESH_WRITEONLY, elements, pDevice, &materials[i].pMesh)))
@@ -284,6 +337,7 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 		}
 
 		// FIXME: This is a hack, figure out how it *should* be done
+		const string& format = material.vertexFormat;
 		float texScale = (format == "alD3dVertRSkinNU2" || format == "alD3dVertB4I4NU2") ? 4096.0f : 1.0f;
 
 		RSkinVertex* data;
@@ -296,6 +350,7 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 			data->TexCoord = v->TexCoords[0] * texScale;
 			data->Tangent  = v->Tangent;
 			data->Binormal = v->Binormal;
+			data->Color    = v->Color;
 		}
 		materials[i].pMesh->UnlockVertexBuffer();
 
@@ -305,9 +360,27 @@ void Engine::EngineImpl::MeshInfo::checkMaterial(int i)
 	}
 }
 
-Engine::EngineImpl::MeshInfo::MeshInfo(IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled)
+Engine::EngineImpl::MeshInfo& Engine::EngineImpl::MeshInfo::operator =(const MeshInfo& meshinfo)
+{
+	enabled			= meshinfo.enabled;
+	index			= meshinfo.index;
+	pMesh			= meshinfo.pMesh;
+	pDevice			= meshinfo.pDevice;
+	pModel			= meshinfo.pModel;
+	effectManager	= meshinfo.effectManager;
+	materials		= meshinfo.materials;
+	return *this;
+}
+
+Engine::EngineImpl::MeshInfo::MeshInfo(const MeshInfo& meshinfo)
+{
+	*this = meshinfo;
+}
+
+Engine::EngineImpl::MeshInfo::MeshInfo(int index, IEffectManager* effectManager, IDirect3DDevice9* pDevice, const Model* model, const IMesh* mesh, bool enabled)
 {
 	pMesh            = mesh;
+	this->index      = index;
 	this->pModel     = model;
 	this->pDevice    = pDevice;
 	this->enabled    = enabled;
@@ -317,6 +390,8 @@ Engine::EngineImpl::MeshInfo::MeshInfo(IEffectManager* effectManager, IDirect3DD
 	materials.resize(nMaterials);
 	for (unsigned int i = 0; i < nMaterials; i++)
 	{
+		materials[i].index       = i;
+		materials[i].iMeshInfo   = index;
 		materials[i].boneMapping = mesh->getMaterial(i).boneMapping;
 	}
 }
@@ -329,89 +404,11 @@ Engine::EngineImpl::MeshInfo::~MeshInfo()
 //
 // Engine class
 //
-
-// Create effect parameters based on current engine settings
-void Engine::EngineImpl::composeParametersTable(map<string,Parameter>& parameters)
+void Engine::EngineImpl::setCamera( const Camera& camera )
 {
-	Parameter param;
-
-	param.type = Parameter::MATRIX;
-	param.m_matrix = settings.World;
-	parameters.insert(make_pair("WORLD", param));
-
-	param.type = Parameter::MATRIX;
-	param.m_matrix  = settings.View;
-	parameters.insert(make_pair("VIEW", param));
-
-	param.type = Parameter::MATRIX;
-	param.m_matrix  = settings.Projection;
-	parameters.insert(make_pair("PROJECTION", param));
-
-	param.type = Parameter::MATRIX;
-	D3DXMatrixMultiply( &param.m_matrix, &settings.World, &settings.View );
-	parameters.insert(make_pair("WORLDVIEW", param));
-
-	Parameter worldViewProj;
-	worldViewProj.type = Parameter::MATRIX;
-	D3DXMatrixMultiply( &worldViewProj.m_matrix, &param.m_matrix, &settings.Projection );
-	parameters.insert(make_pair("WORLDVIEWPROJECTION", worldViewProj));
-
-	param.type = Parameter::MATRIX;
-	D3DXMatrixMultiply( &param.m_matrix, &settings.View, &settings.Projection );
-	parameters.insert(make_pair("VIEWPROJECTION", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Position.x;
-	param.m_float4[1] = settings.Lights[0].Position.y;
-	param.m_float4[2] = settings.Lights[0].Position.z;
-	param.m_float4[3] = 1.0f;
-	parameters.insert(make_pair("DIR_LIGHT_VEC_0", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Position.x;
-	param.m_float4[1] = settings.Lights[0].Position.y;
-	param.m_float4[2] = settings.Lights[0].Position.z;
-	param.m_float4[3] = 1.0f;
-	parameters.insert(make_pair("DIR_LIGHT_OBJ_VEC_0", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Specular.r;
-	param.m_float4[1] = settings.Lights[0].Specular.g;
-	param.m_float4[2] = settings.Lights[0].Specular.b;
-	param.m_float4[3] = settings.Lights[0].Specular.a;
-	parameters.insert(make_pair("DIR_LIGHT_SPECULAR_0", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Lights[0].Diffuse.r;
-	param.m_float4[1] = settings.Lights[0].Diffuse.g;
-	param.m_float4[2] = settings.Lights[0].Diffuse.b;
-	param.m_float4[3] = settings.Lights[0].Diffuse.a;
-	parameters.insert(make_pair("DIR_LIGHT_DIFFUSE_0", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = 1.0f;
-	param.m_float4[1] = 1.0f;
-	param.m_float4[2] = 1.0f;
-	param.m_float4[3] = 1.0f;
-	parameters.insert(make_pair("LIGHT_SCALE", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Eye.Position.x;
-	param.m_float4[1] = settings.Eye.Position.y;
-	param.m_float4[2] = settings.Eye.Position.z;
-	param.m_float4[3] = 1.0f;
-	parameters.insert(make_pair("EYE_POSITION", param));
-
-	param.type = Parameter::FLOAT4;
-	param.m_float4[0] = settings.Eye.Target.x;
-	param.m_float4[1] = settings.Eye.Target.y;
-	param.m_float4[2] = settings.Eye.Target.z;
-	param.m_float4[3] = 1.0f;
-	parameters.insert(make_pair("EYE_OBJ_POSITION", param));
-
-	param.type = Parameter::FLOAT;
-	param.m_float = GetTickCount() / 1000.0f;
-	parameters.insert(make_pair("TIME", param));
+	settings.Eye = camera;
+	D3DXMatrixLookAtRH(&settings.View, &camera.Position, &camera.Target, &camera.Up );
+	D3DXMatrixMultiply(&settings.ViewProjection, &settings.View, &settings.Projection);
 }
 
 // Set the parameter for this effect
@@ -419,22 +416,11 @@ void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, c
 {
 	switch (param.type)
 	{
-		case Parameter::INT:
-			pEffect->SetInt(hParam, param.m_int);
-			break;
-
-		case Parameter::FLOAT:
-			pEffect->SetFloat(hParam, param.m_float);
-			break;
-
-		case Parameter::FLOAT3:
-			pEffect->SetFloatArray(hParam, param.m_float3, 3);
-			break;
-
-		case Parameter::FLOAT4:
-			pEffect->SetFloatArray(hParam, param.m_float4, 4);
-			break;
-
+		case Parameter::INT:	pEffect->SetInt(hParam, param.m_int); break;
+		case Parameter::FLOAT:	pEffect->SetFloat(hParam, param.m_float); break;
+		case Parameter::FLOAT3:	pEffect->SetFloatArray(hParam, param.m_float3, 3); break;
+		case Parameter::FLOAT4:	pEffect->SetFloatArray(hParam, param.m_float4, 4); break;
+		case Parameter::MATRIX: pEffect->SetMatrix(hParam, &param.m_matrix); break;
 		case Parameter::TEXTURE:
 		{
 			IDirect3DTexture9* pTexture = textureManager->getTexture(pDevice, param.m_texture);
@@ -444,17 +430,79 @@ void Engine::EngineImpl::setParameter(ID3DXEffect* pEffect, D3DXHANDLE hParam, c
 			}
 			break;
 		}
-
-		case Parameter::MATRIX:
-			pEffect->SetMatrix(hParam, &param.m_matrix);
-			break;
 	}
 }
 
-void Engine::EngineImpl::setCamera( const Camera& camera )
+void Engine::EngineImpl::doBillboard(const Bone* pBone, D3DXMATRIX& world, D3DXMATRIX& viewInv)
 {
-	settings.Eye = camera;
-	D3DXMatrixLookAtRH(&settings.View, &camera.Position, &camera.Target, &camera.Up );
+	if (pBone->billboardType != BT_DISABLE)
+	{
+		D3DXMATRIX transform;
+		D3DXMATRIX rotation;
+		D3DXMatrixRotationX(&rotation, D3DXToRadian(-90));
+		switch (pBone->billboardType)
+		{
+			case BT_PARALLEL:
+			case BT_FACE:
+				D3DXMatrixMultiply(&transform, &rotation, &viewInv);
+				D3DXMatrixMultiply(&world, &transform, &world);
+				break;
+
+			case BT_ZAXIS_LIGHT:
+			{
+				D3DXMatrixRotationZ(&transform, atan2(-settings.Lights[0].Direction.y, -settings.Lights[0].Direction.x) - D3DXToRadian(90));
+				D3DXMatrixMultiply(&world, &transform, &world);
+				break;
+			}
+
+			case BT_ZAXIS_VIEW:
+			{
+				D3DXMatrixRotationZ(&transform, atan2(settings.Eye.Position.y, settings.Eye.Position.x) - D3DXToRadian(90) );
+				D3DXMatrixMultiply(&world, &transform, &world);
+				break;
+			}
+
+			case BT_ZAXIS_WIND:
+			{
+				D3DXMatrixRotationZ(&transform, atan2(-settings.Wind.y, -settings.Wind.x) - D3DXToRadian(90) );
+				D3DXMatrixMultiply(&world, &transform, &world);
+				break;
+			}
+
+			case BT_SUNLIGHT_GLOW:
+				if (pBone != NULL)
+				{
+					D3DXMatrixInverse(&transform, NULL, &pBone->matrix);
+					D3DXMatrixMultiply(&transform, &transform, &rotation);
+					D3DXMatrixMultiply(&transform, &transform, &pBone->matrix);
+					D3DXMatrixMultiply(&transform, &transform, &viewInv);
+					D3DXMatrixMultiply(&world, &world, &transform);
+				}
+				break;
+
+			case BT_SUN:
+				if (pBone != NULL)
+				{
+					D3DXMatrixInverse(&transform, NULL, &pBone->matrix);
+					D3DXMatrixMultiply(&transform, &transform, &rotation);
+					D3DXMatrixMultiply(&transform, &transform, &viewInv);
+
+					D3DXMATRIX tmp;
+					float len = sqrt(settings.Lights[0].Position.x * settings.Lights[0].Position.x + settings.Lights[0].Position.y * settings.Lights[0].Position.y);
+					D3DXMatrixRotationY(&tmp, -atan2(settings.Lights[0].Position.z, len));
+					D3DXMatrixRotationZ(&rotation, atan2(settings.Lights[0].Position.y, settings.Lights[0].Position.x));
+					D3DXMatrixMultiply(&rotation, &tmp, &rotation);
+
+					D3DXMatrixMultiply(&tmp, &pBone->matrix, &rotation);
+					tmp._12 = tmp._13 = tmp._14 = tmp._21 = tmp._23 = tmp._24 = tmp._31 = tmp._32 = tmp._34 = 0.0f;
+					tmp._11 = tmp._22 = tmp._33 = 1.0f;
+
+					D3DXMatrixMultiply(&transform, &transform, &tmp);
+					D3DXMatrixMultiply(&world, &world, &transform);
+				}
+				break;
+		}
+	}
 }
 
 bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
@@ -469,138 +517,244 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 			return false;
 	}
 
-	// Prepare SPH_LIGHT_FILL matrices
-	D3DXMATRIX SPH_Light_Fill[3];
-	memset(SPH_Light_Fill, 0, sizeof(D3DXMATRIX)*3);
-	SPH_Light_Fill[0]._44 = settings.Lights[0].Ambient.r;
-	SPH_Light_Fill[1]._44 = settings.Lights[0].Ambient.g;
-	SPH_Light_Fill[2]._44 = settings.Lights[0].Ambient.b;
+	//
+	// Calculate global parameters
+	//
+	float time = GetTickCount() / 1000.0f;
+	D3DXVECTOR4 eye(settings.Eye.Position.x, settings.Eye.Position.y, settings.Eye.Position.z, 1.0f);
+	
+	D3DXMATRIX shadowTranslate;
+	D3DXMatrixTranslation(&shadowTranslate, settings.Lights[0].Direction.x, settings.Lights[0].Direction.y, settings.Lights[0].Direction.z);
 
-	// Prepare SPH_LIGHT_ALL matrices
-	D3DXMATRIX SPH_Light_All[3];
-	memset(SPH_Light_All, 0, sizeof(D3DXMATRIX)*3);
-	SPH_Light_All[0]._44 = settings.Lights[0].Ambient.r;
-	SPH_Light_All[1]._44 = settings.Lights[0].Ambient.g;
-	SPH_Light_All[2]._44 = settings.Lights[0].Ambient.b;
+	D3DXMATRIX identity;
+	D3DXMatrixIdentity(&identity);
+	pDevice->SetTransform(D3DTS_VIEW, &settings.View);
+	pDevice->SetTransform(D3DTS_PROJECTION, &settings.Projection);
 
-	// Yes, now clear
-	pDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f, 0);
-	pDevice->BeginScene();
+	// Set global states
+	pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 
-	DWORD fillMode = (settings.renderMode == RM_WIREFRAME) ? D3DFILL_WIREFRAME : D3DFILL_SOLID;
-
-	// Render all the meshes
-	for (int i = (int)meshes.size() - 1; i >= 0 ; i--)
+	// Set Fixed Function states
+	D3DLIGHT9 D3DLight =
 	{
-		MeshInfo& meshinfo = meshes[i];
-		unsigned int numMaterials = meshinfo.getNumMaterials();
-		if (!meshinfo.isEnabled() || numMaterials == 0)
+		D3DLIGHT_DIRECTIONAL,
+		{settings.Lights[0].Diffuse.x,  settings.Lights[0].Diffuse.y,  settings.Lights[0].Diffuse.z,  settings.Lights[0].Diffuse.w },
+		{settings.Lights[0].Specular.x, settings.Lights[0].Specular.y, settings.Lights[0].Specular.z, settings.Lights[0].Specular.w},
+		{settings.Ambient.x, settings.Ambient.y, settings.Ambient.z, settings.Ambient.w},
+		{0,0,0},
+		{settings.Lights[0].Direction.x, settings.Lights[0].Direction.y, settings.Lights[0].Direction.z}
+	};
+
+	D3DXMATRIX billboard;
+	D3DXMatrixInverse(&billboard, NULL, &settings.View);
+	billboard._41 = billboard._42 = billboard._43 = 0.0f;	// Clear transpose, rotation only
+
+	D3DLIGHT9 D3DShadow = D3DLight;
+	D3DShadow.Diffuse .r *= settings.Shadow.x; D3DShadow.Diffuse .g *= settings.Shadow.y; D3DShadow.Diffuse .b *= settings.Shadow.z; D3DShadow.Diffuse .a *= settings.Shadow.w;
+	D3DShadow.Specular.r *= settings.Shadow.x; D3DShadow.Specular.g *= settings.Shadow.y; D3DShadow.Specular.b *= settings.Shadow.z; D3DShadow.Specular.a *= settings.Shadow.w;
+	D3DShadow.Ambient .r *= settings.Shadow.x; D3DShadow.Ambient .g *= settings.Shadow.y; D3DShadow.Ambient .b *= settings.Shadow.z; D3DShadow.Ambient .a *= settings.Shadow.w;
+
+	pDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+	pDevice->LightEnable(0, TRUE);
+	pDevice->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_RGBA(
+		(int)(settings.Ambient.x * 255),
+		(int)(settings.Ambient.y * 255),
+		(int)(settings.Ambient.z * 255),
+		(int)(settings.Ambient.w * 255)) );
+
+	D3DMATERIAL9 material = {{1,1,1,1}, {1,1,1,1}, {1,1,1,1}, {0,0,0,0}, 0};
+	pDevice->SetMaterial(&material);
+
+	//
+	// Create a per-phase list of all the meshes
+	//
+	D3DXMaterial* phases[NUM_PHASES] = {NULL};
+	for (size_t i = 0; i < meshes.size(); i++)
+	{
+		if (meshes[i].isEnabled())
 		{
-			continue;
-		}
-
-		pDevice->SetRenderState(D3DRS_CULLMODE, meshinfo.getIMesh()->getCulling()  );
-		pDevice->SetRenderState(D3DRS_FILLMODE, meshinfo.getIMesh()->getFillMode() );
-
-		// Set world transformation
-		settings.World = animatedModel->getAnimatedBone( model->getConnection(i), frame);
-
-		for (unsigned int m = 0; m < numMaterials; m++)
-		{
-			map<string,Parameter> parameters;
-			composeParametersTable(parameters);
-
-			const D3DXMaterial* material = meshinfo.getMaterial(m);
-			if (material->pEffect != NULL)
+			unsigned int numMaterials = meshes[i].getNumMaterials();
+			for (unsigned int m = 0; m < numMaterials; m++)
 			{
-				// We have an effect, so use it
-				D3DXEFFECT_DESC effdesc;
-				ID3DXEffect* pEffect = material->pEffect;
-				pEffect->GetDesc(&effdesc);
-
-				D3DXMATRIX skinArray[24];
-				skinArray[0] = settings.World;
-
-				// Set the parameters with semantics from the effects file
-				for (unsigned int iParam = 0; iParam < effdesc.Parameters; iParam++)
-				{
-					D3DXHANDLE hParam = pEffect->GetParameter(NULL, iParam);
-					D3DXPARAMETER_DESC desc;
-					pEffect->GetParameterDesc( hParam, &desc );
-					if (desc.Semantic != NULL)
-					{
-						if (strcmp(desc.Semantic,"SKINMATRIXARRAY") == 0)
-						{
-							const IMesh* mesh = meshinfo.getIMesh();
-							unsigned int numMappings = (unsigned int)material->boneMapping.size();
-							for (unsigned long m = 0; m < numMappings; m++)
-							{
-								unsigned long bone = material->boneMapping[m];
-								
-								D3DXMATRIX transform;
-								model->getBoneTransformation(bone, transform);
-								D3DXMatrixInverse(&transform, NULL, &transform);
-
-								skinArray[m] = animatedModel->getAnimatedBone(bone, frame);
-								D3DXMatrixMultiply(&skinArray[m], &transform, &skinArray[m]);
-							}
-
-							pEffect->SetMatrixArray(hParam, skinArray, max(1,numMappings));
-						}
-						else if (strcmp(desc.Semantic,"SPH_LIGHT_FILL") == 0)
-						{
-							pEffect->SetMatrixArray(hParam, SPH_Light_Fill, 3);
-						}
-						else if (strcmp(desc.Semantic,"SPH_LIGHT_ALL") == 0)
-						{
-							pEffect->SetMatrixArray(hParam, SPH_Light_All, 3);
-						}
-						else
-						{
-							map<string,Parameter>::const_iterator p = parameters.find(desc.Semantic);
-							if (p != parameters.end())
-							{
-								setParameter(pEffect, hParam, p->second);
-							}
-						}
-					}
-
-					if (desc.Name != NULL && ri.useColor && strcmp(desc.Name, "Colorization") == 0)
-					{
-						float color[4] = { GetRValue(ri.color) / 255.0f, GetGValue(ri.color) / 255.0f, GetBValue(ri.color) / 255.0f, 1.0f};
-						pEffect->SetFloatArray(hParam, color, 4);
-					}
-				}
-
-				// Set the parameters from the mesh file
-				const Effect& effect = meshinfo.getIMesh()->getMaterial(m).effect;
-				for (vector<Parameter>::const_iterator p = effect.parameters.begin(); p != effect.parameters.end(); p++)
-				{
-					if (p->name != "Colorization" || !ri.useColor)
-					{
-						D3DXHANDLE hParam = pEffect->GetParameterByName( NULL, p->name.c_str() );
-						if (hParam != NULL)
-						{
-							setParameter(pEffect, hParam, *p);
-						}
-					}
-				}
-		
-				// Use the effect to render the mesh
-				unsigned int nPasses;
-				pEffect->Begin(&nPasses, 0);
-				for (unsigned int iPass = 0; iPass < nPasses; iPass++)
-				{	
-					pEffect->BeginPass(iPass);
-					pEffect->CommitChanges();
-					pDevice->SetRenderState(D3DRS_FILLMODE, fillMode);
-					material->pMesh->DrawSubset(0);
-					pEffect->EndPass();
-				}
-				pEffect->End();
+				D3DXMaterial* material = meshes[i].getMaterial(m);
+				material->next = phases[material->phase];
+				phases[material->phase] = material;
 			}
 		}
 	}
+
+	//
+	// Now render the scene
+	//
+	static const int STENCIL_INITIAL_VALUE = 8;
+
+	D3DCOLOR background = D3DCOLOR_XRGB(GetRValue(settings.Background), GetGValue(settings.Background), GetBValue(settings.Background));
+	pDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, background, 1.0f, STENCIL_INITIAL_VALUE);
+	pDevice->BeginScene();
+
+	bool nolight = false;
+	for (int phase = 0; phase < NUM_PHASES; phase++)
+	{
+		pDevice->SetLight(0, (nolight) ? &D3DShadow : &D3DLight);
+
+		if (settings.isGroundVisible && phase == PHASE_OPAQUE)
+		{
+			//
+			// Render the ground plane
+			//
+			struct GROUNDVERTEX
+			{
+				D3DXVECTOR3 Position;
+				D3DXVECTOR3 Normal;
+				D3DCOLOR	Color;
+			};
+
+			static GROUNDVERTEX GroundPlane[4] = {
+				{D3DXVECTOR3(-10000,-10000,0), D3DXVECTOR3(0,0,1), 0},
+				{D3DXVECTOR3( 10000,-10000,0), D3DXVECTOR3(0,0,1), 0},
+				{D3DXVECTOR3(-10000, 10000,0), D3DXVECTOR3(0,0,1), 0},
+				{D3DXVECTOR3( 10000, 10000,0), D3DXVECTOR3(0,0,1), 0},
+			};
+
+			D3DCOLOR color = D3DCOLOR_RGBA(GetRValue(settings.Background), GetGValue(settings.Background), GetBValue(settings.Background), 255);
+			GroundPlane[0].Color = GroundPlane[1].Color = GroundPlane[2].Color = GroundPlane[3].Color = color;
+
+			pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+			pDevice->SetTransform(D3DTS_WORLD, &identity);
+			pDevice->SetFVF(D3DFVF_DIFFUSE | D3DFVF_NORMAL | D3DFVF_XYZ);
+			pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, GroundPlane, sizeof(GROUNDVERTEX));
+		}
+
+		pDevice->SetRenderState(D3DRS_FILLMODE, (settings.renderMode == RM_WIREFRAME) ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
+		pDevice->SetRenderState(D3DRS_CULLMODE, (phase == PHASE_TRANSPARENT) ? D3DCULL_NONE : D3DCULL_CW);
+
+		// Render all materials in this phase
+		for (const D3DXMaterial* material = phases[phase]; material != NULL; material = material->next)
+		{
+			const MeshInfo& meshinfo = meshes[material->iMeshInfo];
+
+			if (material->pEffect == NULL)
+			{
+				// No effect? No rendering!
+				continue;
+			}
+
+			// Set world transformation
+			int bone = model->getConnection(meshinfo.getIndex());
+			D3DXMATRIX world = animatedModel->getAnimatedBone(bone, frame);
+			doBillboard( (bone != -1) ? model->getBone(bone) : NULL, world, billboard);
+			if (phase == PHASE_SHADOW)
+			{
+				// Transpose the shadow mesh slightly in the direction of the light to avoid coplanar Z-fighting
+				D3DXMatrixMultiply(&world, &world, &shadowTranslate);
+			}
+
+			// For some reason, we need to rotate light0 in opposite direction of the mesh's rotation if
+			// the lighting and shadows are to be calculated correctly.
+			D3DXVECTOR4 light0_pos(settings.Lights[0].Position.x, settings.Lights[0].Position.y, settings.Lights[0].Position.z, 1.0f);
+			D3DXMATRIX  lightRotationInv;
+			D3DXMatrixInverse(&lightRotationInv, NULL, &world);
+			lightRotationInv._41 = lightRotationInv._42 = lightRotationInv._43 = 0.0f;	// Clear translation
+			D3DXVec4Transform(&light0_pos, &light0_pos, &lightRotationInv);
+
+			// Set the parameters from the mesh file
+			ID3DXEffect* pEffect = material->pEffect;
+			const Effect& effect = meshinfo.getIMesh()->getMaterial(material->index).effect;
+			for (vector<Parameter>::const_iterator p = effect.parameters.begin(); p != effect.parameters.end(); p++)
+			{
+				setParameter(pEffect, p->name.c_str(), *p);
+			}
+
+			// Set the transforms for the Fixed Function pipeline, in case it uses it
+			D3DXMATRIX worldView;
+			D3DXMATRIX worldViewProjection;
+			D3DXMatrixMultiply(&worldView,           &world, &settings.View);
+			D3DXMatrixMultiply(&worldViewProjection, &world, &settings.ViewProjection);
+			pDevice->SetTransform(D3DTS_WORLD,       &world);
+
+			// Set the parameters with semantics from the effects file
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "WORLD"),				  &world);
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "VIEW"),				  &settings.View );
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "WORLDVIEW"),			  &worldView);
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "PROJECTION"),			  &settings.Projection);
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "VIEWPROJECTION"),		  &settings.ViewProjection);
+			pEffect->SetMatrix(pEffect->GetParameterBySemantic(NULL, "WORLDVIEWPROJECTION"),  &worldViewProjection);
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "GLOBAL_AMBIENT"),       &settings.Ambient );
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "DIR_LIGHT_VEC_0"),      &light0_pos );
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "DIR_LIGHT_OBJ_VEC_0"),  &light0_pos );
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "DIR_LIGHT_DIFFUSE_0"),  &settings.Lights[0].Diffuse);
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "DIR_LIGHT_SPECULAR_0"), &settings.Lights[0].Specular);
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "LIGHT_SCALE"),      (nolight) ? &settings.Shadow : &D3DXVECTOR4(1,1,1,1));
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "EYE_POSITION"),     &eye);
+			pEffect->SetVector(pEffect->GetParameterBySemantic(NULL, "EYE_OBJ_POSITION"), &eye);
+			pEffect->SetFloat(pEffect->GetParameterBySemantic(NULL, "TIME"), time);
+			pEffect->SetMatrixArray(pEffect->GetParameterBySemantic(NULL, "SPH_LIGHT_FILL"), settings.SPH_Light_Fill, 3);
+			pEffect->SetMatrixArray(pEffect->GetParameterBySemantic(NULL, "SPH_LIGHT_ALL"),  settings.SPH_Light_All,  3);
+			if (ri.useColor)
+			{
+				D3DXVECTOR4 color(GetRValue(ri.color) / 255.0f, GetGValue(ri.color) / 255.0f, GetBValue(ri.color) / 255.0f, 1.0f);
+				pEffect->SetVector("Colorization", &color);
+			}
+			pEffect->SetFloat("EdgeBrightness", 2.0f);	// For the shields to show up properly
+
+			D3DXHANDLE hSkinMatrixArray = pEffect->GetParameterBySemantic(NULL, "SKINMATRIXARRAY");
+			if (hSkinMatrixArray != NULL)
+			{
+				unsigned int numMappings = (unsigned int)material->boneMapping.size();
+				if (numMappings == 0)
+				{
+					pEffect->SetMatrix(hSkinMatrixArray, &world);
+				}
+				else
+				{
+					D3DXMATRIX skinArray[24];
+					for (unsigned long map = 0; map < numMappings; map++)
+					{
+						unsigned long bone = material->boneMapping[map];
+						D3DXMATRIX transform;
+						model->getBoneTransformation(bone, transform);
+						D3DXMatrixInverse(&transform, NULL, &transform);
+						if (phase == PHASE_SHADOW)
+						{
+							D3DXMatrixMultiply(&transform, &transform, &shadowTranslate);
+						}
+						skinArray[map] = animatedModel->getAnimatedBone(bone, frame);
+						D3DXMatrixMultiply(&skinArray[map], &transform, &skinArray[map]);
+					}
+					pEffect->SetMatrixArray(hSkinMatrixArray, skinArray, numMappings);
+				}
+			}
+
+			// Use the effect to render the mesh
+			unsigned int nPasses;
+			pEffect->Begin(&nPasses, 0);
+			for (unsigned int iPass = 0; iPass < nPasses; iPass++)
+			{	
+				pEffect->BeginPass(iPass);
+				material->pMesh->DrawSubset(0);
+				pEffect->EndPass();
+			}
+			pEffect->End();
+		}
+
+		if (nolight && phase == PHASE_TRANSPARENT)
+		{
+			break;
+		}
+		else if (phase == PHASE_SHADOW && !nolight)
+		{
+			phase = -1;
+			nolight = true;
+			pDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
+			pDevice->SetRenderState(D3DRS_STENCILENABLE, TRUE);
+			pDevice->SetRenderState(D3DRS_STENCILREF,    STENCIL_INITIAL_VALUE);
+			pDevice->SetRenderState(D3DRS_STENCILFUNC,   D3DCMP_LESS);
+			pDevice->SetRenderState(D3DRS_STENCILPASS,	 D3DSTENCILOP_KEEP);
+			pDevice->SetRenderState(D3DRS_STENCILFAIL,   D3DSTENCILOP_KEEP);
+		}
+	}
+	pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 
 	if (ri.showBones && model != NULL)
 	{
@@ -615,34 +769,59 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 
 		unsigned int numBones = model->getNumBones();
 		BoneVertex* bonePoints = new BoneVertex[numBones];
-		BoneVertex* boneLines  = new BoneVertex[numBones*2];
-
+		BoneVertex* boneLines  = new BoneVertex[numBones*8];
+		
 		// Create bone array
 		for (unsigned int i = 0; i < numBones; i++)
 		{
+			const Bone* bone = model->getBone(i);
 			D3DXMATRIX transform;
 
 			// Create transformation matrix for this joint
 			transform = animatedModel->getAnimatedBone(i, frame);
+			doBillboard(bone, transform, billboard);
 
 			D3DXVec3TransformCoord(&bonePoints[i].pos, &D3DXVECTOR3(0,0,0), &transform);
 			bonePoints[i].color = D3DCOLOR_XRGB(255,255,0);
 
-			boneLines[2*i+0].pos   = bonePoints[i].pos;
-			boneLines[2*i+0].color = D3DCOLOR_XRGB(255,255,0);
-			const Bone* bone = model->getBone(i);
+			BoneVertex* lines = &boneLines[8*i];
+
+			// Create local coordinate system lines
+			transform._41 = transform._42 = transform._43 = 0.0; // No translation, only rotation
+
+			D3DXVec3TransformCoord( &lines[3].pos, &D3DXVECTOR3(2,0,0), &transform);
+			lines[2].color = lines[3].color = D3DCOLOR_XRGB(255,0,0);
+			lines[2].pos   = bonePoints[i].pos;
+			lines[3].pos  += bonePoints[i].pos;
+			D3DXVec3TransformCoord( &lines[5].pos, &D3DXVECTOR3(0,2,0), &transform);
+			lines[4].color = lines[5].color = D3DCOLOR_XRGB(0,255,0);
+			lines[4].pos   = bonePoints[i].pos;
+			lines[5].pos  += bonePoints[i].pos;
+			D3DXVec3TransformCoord( &lines[7].pos, &D3DXVECTOR3(0,0,2), &transform);
+			lines[6].color = lines[7].color = D3DCOLOR_XRGB(0,0,255);
+			lines[6].pos   = bonePoints[i].pos;
+			lines[7].pos  += bonePoints[i].pos;
+
+			// Create parent-child connection line
+			lines[0].color = D3DCOLOR_XRGB(255,255,0);
+			lines[0].pos   = bonePoints[i].pos;
 			if (bone->parent != -1)
 			{
 				// Create transformation matrix for parent joint
 				transform = animatedModel->getAnimatedBone(bone->parent, frame);
+				D3DXVec3TransformCoord(&lines[1].pos, &D3DXVECTOR3(0,0,0), &transform);
+				lines[1].color = D3DCOLOR_XRGB(255,255,0);
 			}
-			D3DXVec3TransformCoord(&boneLines[2*i+1].pos, &D3DXVECTOR3(0,0,0), &transform);
-			boneLines[2*i+1].color = D3DCOLOR_XRGB(255,255,0);
+			else
+			{
+				lines[1] = lines[0];
+			}
 		}
 
 		// Render bones
 		float PointSize = 4.0;
 		pDevice->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+		pDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 		pDevice->SetRenderState(D3DRS_POINTSIZE, *(DWORD*)&PointSize);
 		D3DXMATRIX identity;
 		D3DXMatrixIdentity(&identity);
@@ -652,7 +831,7 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 
 		pDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
 		pDevice->DrawPrimitiveUP(D3DPT_POINTLIST, numBones, bonePoints, sizeof(BoneVertex));
-		pDevice->DrawPrimitiveUP(D3DPT_LINELIST,  numBones, boneLines,  sizeof(BoneVertex));
+		pDevice->DrawPrimitiveUP(D3DPT_LINELIST,  numBones * 4, boneLines,  sizeof(BoneVertex));
 
 		delete[] boneLines;
 		delete[] bonePoints;
@@ -663,7 +842,7 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 	if (ri.showBones && ri.showBoneNames && model != NULL)
 	{
 		// Show bone names
-		HDC hDC = GetDC(dpp.hDeviceWindow);
+		HDC hDC = GetDC(PresentationParameters.hDeviceWindow);
 		SelectObject(hDC, GetStockObject(DEFAULT_GUI_FONT));
 		SetBkMode(hDC, TRANSPARENT);
 		SetTextColor(hDC, RGB(255,255,0));
@@ -684,6 +863,8 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 			D3DXMATRIX  transform;
 			D3DXVECTOR3 position;
 			transform = animatedModel->getAnimatedBone(i, frame);
+			doBillboard(bone, transform, billboard);
+
 			D3DXVec3TransformCoord(&position, &D3DXVECTOR3(0,0,0), &transform);
 
 			// Project unto screen
@@ -699,7 +880,7 @@ bool Engine::EngineImpl::render(unsigned int frame, const RENDERINFO& ri)
 			}
 		}
 
-		ReleaseDC(dpp.hDeviceWindow, hDC);
+		ReleaseDC(PresentationParameters.hDeviceWindow, hDC);
 	}
 
 	return true;
@@ -718,14 +899,14 @@ void Engine::EngineImpl::reinitialize( HWND hWnd, int width, int height )
 	//
 	// Reset device
 	//
-	dpp.BackBufferWidth  = 0;
-    dpp.BackBufferHeight = 0;
-	dpp.BackBufferCount  = 1;
-    dpp.hDeviceWindow    = hWnd;
-    dpp.Windowed         = true;
+	PresentationParameters.BackBufferWidth  = 0;
+    PresentationParameters.BackBufferHeight = 0;
+	PresentationParameters.BackBufferCount  = 1;
+    PresentationParameters.hDeviceWindow    = hWnd;
+    PresentationParameters.Windowed         = true;
 
 	HRESULT hErr;
-	if ((hErr = pDevice->Reset( &dpp )) != D3D_OK)
+	if ((hErr = pDevice->Reset( &PresentationParameters )) != D3D_OK)
 	{
 		throw D3DException( hErr );
 	}
@@ -738,7 +919,57 @@ void Engine::EngineImpl::reinitialize( HWND hWnd, int width, int height )
 
 	if (width > 0 && height > 0)
 	{
-		D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)width / height, 1.0f, 10000.0f );
+		// http://www.gamedev.net/columns/hardcore/shadowvolume/page4.asp
+		float n = 1.0f;
+		D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)width / height, n, 1000.0f );
+		settings.Projection._33 = -1.0f;
+		settings.Projection._43 = -2 * n;
+
+		D3DXMatrixMultiply(&settings.ViewProjection, &settings.View, &settings.Projection);
+	}
+}
+
+D3DFORMAT Engine::EngineImpl::GetDepthStencilFormat(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat)
+{
+	static const D3DFORMAT Formats[3] = { D3DFMT_D24S8, D3DFMT_D24FS8, D3DFMT_D24X4S4 };
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (SUCCEEDED(pD3D->CheckDeviceFormat     (Adapter, DeviceType, AdapterFormat, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, Formats[i])))
+		if (SUCCEEDED(pD3D->CheckDepthStencilMatch(Adapter, DeviceType, AdapterFormat, AdapterFormat, Formats[i])))
+		{
+			return Formats[i];
+		}
+	}
+
+	return D3DFMT_UNKNOWN;
+}
+
+void Engine::EngineImpl::GetMultiSampleType(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT DisplayFormat)
+{
+	D3DMULTISAMPLE_TYPE MultiSampleTypes[16] = {
+		D3DMULTISAMPLE_16_SAMPLES, D3DMULTISAMPLE_15_SAMPLES, D3DMULTISAMPLE_14_SAMPLES, D3DMULTISAMPLE_13_SAMPLES,
+		D3DMULTISAMPLE_12_SAMPLES, D3DMULTISAMPLE_11_SAMPLES, D3DMULTISAMPLE_10_SAMPLES, D3DMULTISAMPLE_9_SAMPLES,
+		D3DMULTISAMPLE_8_SAMPLES, D3DMULTISAMPLE_7_SAMPLES, D3DMULTISAMPLE_6_SAMPLES, D3DMULTISAMPLE_5_SAMPLES,
+		D3DMULTISAMPLE_4_SAMPLES, D3DMULTISAMPLE_3_SAMPLES, D3DMULTISAMPLE_2_SAMPLES, D3DMULTISAMPLE_NONE
+	};
+
+	int i;
+	for (i = 0; i < 16; i++)
+	{
+		if (SUCCEEDED(pD3D->CheckDeviceMultiSampleType(Adapter, DeviceType, DisplayFormat,                                 PresentationParameters.Windowed, MultiSampleTypes[i], &PresentationParameters.MultiSampleQuality)))
+		if (SUCCEEDED(pD3D->CheckDeviceMultiSampleType(Adapter, DeviceType, PresentationParameters.AutoDepthStencilFormat, PresentationParameters.Windowed, MultiSampleTypes[i], &PresentationParameters.MultiSampleQuality)))
+		{
+			PresentationParameters.MultiSampleQuality--;
+			PresentationParameters.MultiSampleType = MultiSampleTypes[i];
+			break;
+		}
+	}
+
+	if (i == 16)
+	{
+		PresentationParameters.MultiSampleQuality = 0;
+		PresentationParameters.MultiSampleType    = D3DMULTISAMPLE_NONE;
 	}
 }
 
@@ -749,80 +980,82 @@ Engine::EngineImpl::EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffe
 	this->textureManager = textureManager;
 	this->effectManager  = effectManager;
 	this->model          = NULL;
-	this->settings.renderMode = RM_SOLID;
+	this->settings.isGroundVisible = false;
+	this->settings.renderMode      = RM_SOLID;
+	this->settings.Background      = RGB(0,0,0);
+	this->settings.Wind            = D3DXVECTOR3(1,0,0);
+
+	UINT       Adapter    = D3DADAPTER_DEFAULT;
+	D3DDEVTYPE DeviceType = D3DDEVTYPE_HAL;
 
 	if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
 	{
-        throw D3DException(D3D_OK);
+        throw D3DException(E_FAIL);
 	}
-
-	//
-	// Find highest possible Anti-Alias level
-	//
-	D3DDISPLAYMODE mode;
-	if ((hErr = pD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &mode)) != D3D_OK)
-	{
-		pD3D->Release();
-		throw D3DException( hErr );
-	}
-
-	DWORD multisampleType;
-	DWORD nQualityLevels;
-	for (multisampleType = 16; multisampleType > 1; multisampleType--)
-	{
-		if ((hErr = pD3D->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, mode.Format, TRUE, (D3DMULTISAMPLE_TYPE)multisampleType, &nQualityLevels)) == D3D_OK)
-		{
-			break;
-		}
-		if (hErr != D3DERR_NOTAVAILABLE)
-		{
-			pD3D->Release();
-			throw D3DException( hErr );
-		}
-	}
-
-	if (multisampleType == 1)
-	{
-		multisampleType = D3DMULTISAMPLE_NONE;
-	}
-	nQualityLevels = max(1, nQualityLevels);
-
-	//
-	// Check if we can use hardware T&L
-	//
-	D3DCAPS9 caps;
-	if ((hErr = pD3D->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps)) != D3D_OK)
-	{
-		pD3D->Release();
-		throw D3DException( hErr );
-	}
-
-	DWORD BehaviorFlags = (caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT) ?  D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 
 	//
 	// Create the device
 	//
-	ZeroMemory(&dpp, sizeof dpp);
-	dpp.BackBufferWidth    = 0;
-	dpp.BackBufferHeight   = 0;
-    dpp.BackBufferFormat   = D3DFMT_UNKNOWN;
-    dpp.BackBufferCount    = 1;
-    dpp.MultiSampleType    = (D3DMULTISAMPLE_TYPE)multisampleType;
-	dpp.MultiSampleQuality = max(0, nQualityLevels - 1);
-    dpp.SwapEffect         = D3DSWAPEFFECT_DISCARD;
-    dpp.hDeviceWindow      = hWnd;
-    dpp.Windowed           = TRUE;
-    dpp.EnableAutoDepthStencil = TRUE;
-    dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
-    dpp.Flags                  = 0;
-    dpp.FullScreen_RefreshRateInHz = 0;
-    dpp.PresentationInterval       = D3DPRESENT_INTERVAL_DEFAULT;
+	ZeroMemory(&PresentationParameters, sizeof PresentationParameters);
+    PresentationParameters.BackBufferFormat   = D3DFMT_UNKNOWN;
+	PresentationParameters.BackBufferWidth    = 0;
+	PresentationParameters.BackBufferHeight   = 0;
+    PresentationParameters.BackBufferCount    = 1;
+    PresentationParameters.SwapEffect         = D3DSWAPEFFECT_DISCARD;
+    PresentationParameters.hDeviceWindow      = hWnd;
+    PresentationParameters.Windowed           = TRUE;
+    PresentationParameters.Flags              = D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL;
+    PresentationParameters.EnableAutoDepthStencil     = TRUE;
+    PresentationParameters.FullScreen_RefreshRateInHz = 0;
+    PresentationParameters.PresentationInterval       = D3DPRESENT_INTERVAL_DEFAULT;
 
-	if ((hErr = pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, BehaviorFlags, &dpp, &pDevice)) != D3D_OK)
+	// Get current display mode
+	D3DDISPLAYMODE DisplayMode;
+	if (FAILED(hErr = pD3D->GetAdapterDisplayMode(Adapter, &DisplayMode)))
 	{
 		pD3D->Release();
 		throw D3DException( hErr );
 	}
+
+	// Determine best depth/stencil buffer format
+	if ((PresentationParameters.AutoDepthStencilFormat = GetDepthStencilFormat(Adapter, DeviceType, DisplayMode.Format)) == D3DFMT_UNKNOWN)
+	{
+		Log::Write("Unable to find a matching depth buffer format\n");
+		pD3D->Release();
+		throw D3DException( E_FAIL );
+	}
+
+	// Get the best multisample type
+	GetMultiSampleType(Adapter, DeviceType, DisplayMode.Format);
+
+	//
+	// Dump what we've got
+	//
+	Log::Write("Initializing Direct3D with:\n");
+	Log::Write(" FSAA:     ");
+	if (PresentationParameters.MultiSampleType == D3DMULTISAMPLE_NONE)  Log::Write("None\n");
+	else Log::Write("%ux (q=%u)\n", PresentationParameters.MultiSampleType, PresentationParameters.MultiSampleQuality);
+
+	const char* buffer = "Unknown";
+	switch (PresentationParameters.AutoDepthStencilFormat)
+	{
+		case D3DFMT_D24S8:	 buffer = "D24/S8"; break;
+		case D3DFMT_D24FS8:  buffer = "D24/FS8"; break;
+		case D3DFMT_D24X4S4: buffer = "D24/X4/S4"; break;
+	}
+	Log::Write(" Buffer:   %s\n", buffer);
+
+	//
+	// Create device (HW first, then SW)
+	//
+	if (FAILED(hErr = pD3D->CreateDevice(Adapter, DeviceType, NULL, D3DCREATE_HARDWARE_VERTEXPROCESSING, &PresentationParameters, &pDevice)))
+	if (FAILED(hErr = pD3D->CreateDevice(Adapter, DeviceType, NULL, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &PresentationParameters, &pDevice)))
+	{
+		pD3D->Release();
+		throw D3DException( hErr );
+	}
+	else Log::Write(" Renderer: Software\n");
+	else Log::Write(" Renderer: Hardware\n");
 
 	//
 	// Set the vertex declaration
@@ -834,7 +1067,12 @@ Engine::EngineImpl::EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffe
 	// Initialize projection matrix with perspective
 	RECT client;
 	GetClientRect( hWnd, &client );
-	D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)client.right / client.bottom, 1.0f, 10000.0f );
+
+	// http://www.gamedev.net/columns/hardcore/shadowvolume/page4.asp
+	float n = 1.0f;
+	D3DXMatrixPerspectiveFovRH(&settings.Projection, D3DXToRadian(45), (float)client.right / client.bottom, n, 10000.0f );
+	settings.Projection._33 = -1.0f;
+	settings.Projection._43 = -2 * n;
 
 	// Initialize camera
 	Camera camera = {
@@ -844,17 +1082,7 @@ Engine::EngineImpl::EngineImpl(HWND hWnd, ITextureManager* textureManager, IEffe
 	};
 	setCamera( camera );
 
-	// Create light
-	D3DLIGHT9 light = 
-	{
-		D3DLIGHT_DIRECTIONAL,
-		{   0.5f,  0.5f,  0.5f,  1.0f},	// Diffuse
-		{   0.0f,  0.0f,  0.0f,  1.0f},	// Specular
-		{   0.25f, 0.25f, 0.25f, 1.0f},	// Ambient
-		{1500.0f,  0.0f,  1000.0f},		// Position
-		{  -0.83f, 0.0f, -0.55f},		// Direction
-	};
-	settings.Lights[0] = light;
+	memset(settings.Lights, 0, 4 * sizeof(D3DLIGHT9));
 }
 
 Engine::EngineImpl::~EngineImpl()
@@ -863,38 +1091,47 @@ Engine::EngineImpl::~EngineImpl()
 	pD3D->Release();
 }
 
-// Get the current camera
-RenderMode Engine::getRenderMode() const
-{
-	return pimpl->settings.renderMode;
-}
+void Engine::setRenderMode(RenderMode mode)		{ pimpl->settings.renderMode = mode; }
+void Engine::setCamera( const Camera& camera )	{ pimpl->setCamera( camera ); }
+void Engine::setGroundVisibility(bool visible)	{ pimpl->settings.isGroundVisible = visible; }
+void Engine::setBackground(COLORREF color)		{ pimpl->settings.Background = color; }
+void Engine::setWind(const D3DXVECTOR3& wind)	{ pimpl->settings.Wind       = wind; }
+RenderMode Engine::getRenderMode() const		{ return pimpl->settings.renderMode; }
+const Camera& Engine::getCamera() const			{ return pimpl->settings.Eye; }
+Model* Engine::getModel() const					{ return pimpl->model; }
+COLORREF Engine::getBackground() const			{ return pimpl->settings.Background; }
 
-void Engine::setRenderMode(RenderMode mode)
+void Engine::setLight(LightType which, const LIGHT& light)
 {
-	pimpl->settings.renderMode = mode;
-}
-
-const Camera& Engine::getCamera() const
-{
-	return pimpl->settings.Eye;
-}
-
-void Engine::setCamera( const Camera& camera )
-{
-	pimpl->setCamera( camera );
-}
-
-void Engine::enableMesh(unsigned int i, bool enabled)
-{
-	if (i >= 0 && i < pimpl->meshes.size())
+	int index = 0;
+	switch (which)
 	{
-		pimpl->meshes[i].enable( enabled );
+		case LT_SUN:	index = 0; break;
+		case LT_FILL1:	index = 1; break;
+		case LT_FILL2:	index = 2; break;
 	}
+	pimpl->settings.Lights[index] = light;
+	
+	// Calculate direction from position
+	D3DXVec3Normalize(&pimpl->settings.Lights[index].Direction, &-pimpl->settings.Lights[index].Position);
+
+	// Recalculate Spherical Harmonics matrices
+	SPH_Calculate_Matrices(pimpl->settings.SPH_Light_Fill,  &pimpl->settings.Lights[1], 2, pimpl->settings.Ambient);
+	SPH_Calculate_Matrices(pimpl->settings.SPH_Light_All,   &pimpl->settings.Lights[0], 3, pimpl->settings.Ambient);
 }
 
-Model* Engine::getModel() const
+void Engine::setAmbient(const D3DXVECTOR4& color)
 {
-	return pimpl->model;
+	pimpl->settings.Ambient = color;
+
+	// Recalculate Spherical Harmonics matrices
+	SPH_Calculate_Matrices(pimpl->settings.SPH_Light_Fill,  &pimpl->settings.Lights[1], 2, pimpl->settings.Ambient);
+	SPH_Calculate_Matrices(pimpl->settings.SPH_Light_All,   &pimpl->settings.Lights[0], 3, pimpl->settings.Ambient);
+}
+
+void Engine::setShadow(const D3DXVECTOR4& color)
+{
+	pimpl->settings.Shadow = color;
 }
 
 void Engine::setModel(Model* model)
@@ -907,7 +1144,15 @@ void Engine::setModel(Model* model)
 	pimpl->meshes.clear();
 	for (unsigned int i = 0; i < model->getNumMeshes(); i++)
 	{
-		pimpl->meshes.push_back( EngineImpl::MeshInfo(pimpl->effectManager, pimpl->pDevice, model, (const IMesh*)model->getMesh(i)) );
+		pimpl->meshes.push_back( EngineImpl::MeshInfo(i, pimpl->effectManager, pimpl->pDevice, model, (const IMesh*)model->getMesh(i)) );
+	}
+}
+
+void Engine::enableMesh(unsigned int i, bool enabled)
+{
+	if (i >= 0 && i < pimpl->meshes.size())
+	{
+		pimpl->meshes[i].enable( enabled );
 	}
 }
 

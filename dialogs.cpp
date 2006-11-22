@@ -297,18 +297,31 @@ static const int PARAMETER_INVALID = 0xFFFF;
 
 static void printBone(HWND hEdit, const Model* model, int iBone, stringstream& str)
 {
+	const static char* billboardTypes[] = {
+		"Disable",
+		"Parallel",
+		"Face",
+		"Z-Axis View",
+		"Z-Axis Light",
+		"Z-Axis Wind",
+		"Sunlight Glow",
+		"Sun",
+	};
+
 	const Bone* bone = model->getBone(iBone);
 	if (bone != NULL)
 	{
 		// Dump bone info to edit screen
 		str << fixed << setprecision(3);
-		str << "Index:  " << iBone << crlf;
-		str << "Name:   " << bone->name << crlf;
-		str << "Parent: " << bone->parent << crlf;
-		str << "Matrix: " << setw(8) << bone->matrix._11 << " " << setw(8) << bone->matrix._12 << " " << setw(8) << bone->matrix._13 << " " << setw(8) << bone->matrix._14 << crlf;
-		str << "        " << setw(8) << bone->matrix._21 << " " << setw(8) << bone->matrix._22 << " " << setw(8) << bone->matrix._23 << " " << setw(8) << bone->matrix._24 << crlf;
-		str << "        " << setw(8) << bone->matrix._31 << " " << setw(8) << bone->matrix._32 << " " << setw(8) << bone->matrix._33 << " " << setw(8) << bone->matrix._34 << crlf;
-		str << "        " << setw(8) << bone->matrix._41 << " " << setw(8) << bone->matrix._42 << " " << setw(8) << bone->matrix._43 << " " << setw(8) << bone->matrix._44 << crlf;
+		str << "Index:        " << iBone << crlf;
+		str << "Name:         " << bone->name << crlf;
+		str << "Visible:      " << (bone->visible ? "Yes" : "No") << crlf;
+		str << "Billboarding: " << billboardTypes[bone->billboardType] << crlf;
+		str << "Parent:       " << bone->parent << crlf;
+		str << "Matrix:       " << setw(8) << bone->matrix._11 << " " << setw(8) << bone->matrix._12 << " " << setw(8) << bone->matrix._13 << " " << setw(8) << bone->matrix._14 << crlf;
+		str << "              " << setw(8) << bone->matrix._21 << " " << setw(8) << bone->matrix._22 << " " << setw(8) << bone->matrix._23 << " " << setw(8) << bone->matrix._24 << crlf;
+		str << "              " << setw(8) << bone->matrix._31 << " " << setw(8) << bone->matrix._32 << " " << setw(8) << bone->matrix._33 << " " << setw(8) << bone->matrix._34 << crlf;
+		str << "              " << setw(8) << bone->matrix._41 << " " << setw(8) << bone->matrix._42 << " " << setw(8) << bone->matrix._43 << " " << setw(8) << bone->matrix._44 << crlf;
 	}
 }
 

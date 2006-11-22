@@ -1,3 +1,4 @@
+#include <set>
 #include "animation.h"
 #include "exceptions.h"
 #include "chunks.h"
@@ -8,6 +9,7 @@ class Animation::AnimationImpl
 {
 	friend class Animation;
 
+	string        name;
 	unsigned long nFrames;
 	float         fps;
 	unsigned long nBones;
@@ -25,6 +27,8 @@ public:
 void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &animation, bool isFoC, bool infoOnly)
 {
 	bool readData = false;
+	bool p4 = false, p6 = false;
+	int  va = -1;
 
 	while (!input->eof())
 	{
@@ -68,6 +72,12 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 					matdata[5] = chunks.getChunk(15, matsize[5]);
 					matdata[6] = chunks.getChunk(16, matsize[6]);
 					matdata[7] = chunks.getChunk(17, matsize[7]);
+					matdata[8] = chunks.getChunk(10, matsize[8]);
+
+					if (matsize[8] != 0) { va = *(uint32_t*)matdata[8]; }
+
+					//printf("\t%.12f %.12f %.12f",  *(float*)(matdata[2]+0), *(float*)(matdata[2]+4), *(float*)(matdata[2]+8));
+					//printf(" | %.12f %.12f %.12f", *(float*)(matdata[3]+0), *(float*)(matdata[3]+4), *(float*)(matdata[3]+8));
 
 					if (matsize[0] != 12 || matsize[1] != 12 || matsize[2] != 12 || matsize[3] != 12 ||
 						(isFoC && (matsize[4] != 2 || matsize[5] != 2 || matsize[6] != 2 || matsize[7] != 8)))
@@ -97,6 +107,7 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 
 			case 0x1004:
 			{
+				p4 = true;
 				if (!infoOnly)
 				{
 					unsigned long size  = chunk.getSize();
@@ -142,6 +153,12 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 						float w = (float)*(int16_t*)&data[i*8+6] / INT16_MAX;
 						animation.quaternions[i] = D3DXQUATERNION(x,y,z,w);
 					}
+					p6 = size > 8 /*||
+						*(int16_t*)&data[0] != 0 ||
+						*(int16_t*)&data[2] != 0 ||
+						*(int16_t*)&data[4] != 0 ||
+						*(int16_t*)&data[6] != INT16_MAX*/;
+
 					delete[] data;
 				}
 				break;
@@ -160,6 +177,20 @@ void Animation::AnimationImpl::readBoneAnimation(File* input, BoneAnimation &ani
 				break;
 		}
 		input->seek(chunk.getStart() + chunk.getSize());
+	}
+/*
+	0 0  1
+	0 1  0
+	1 0  0
+	1 1  1
+*/
+
+	if (va != -1)
+	{
+		if (va && (p4 || p6))
+		{
+			printf("%d %d %d\t%s\n", va, p4, p6, animation.name.c_str());
+		}
 	}
 
 	if (!readData)
@@ -287,6 +318,7 @@ void Animation::AnimationImpl::readAnimation(File* input, bool infoOnly)
 
 Animation::AnimationImpl::AnimationImpl(File* input, bool infoOnly)
 {
+	name = input->getName();
 	while (!input->eof())
 	{
 		Chunk chunk(input);
@@ -328,6 +360,11 @@ unsigned int Animation::getNumFrames() const
 float Animation::getFPS() const
 {
 	return pimpl->fps;
+}
+
+const std::string& Animation::getName() const
+{
+	return pimpl->name;
 }
 
 Animation::Animation(File* file, bool infoOnly) : pimpl(new AnimationImpl(file, infoOnly))

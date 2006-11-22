@@ -21,6 +21,7 @@ public:
 	unsigned int getNumBoneAnimations() const;
 	unsigned int getNumFrames() const;
 	float        getFPS() const;
+	const std::string& getName() const;
 
 	Animation(File* file, bool infoOnly = false);
 	~Animation();

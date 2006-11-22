@@ -35,8 +35,6 @@ Mesh::MeshImpl::~MeshImpl()
 // Mesh functions
 //
 
-D3DFILLMODE        Mesh::getFillMode()          const { return D3DFILL_SOLID; }
-D3DCULL            Mesh::getCulling()           const { return D3DCULL_CW;    }
 const std::string& Mesh::getName()              const { return pimpl->name;   }
 int                Mesh::getIndex()             const { return pimpl->index;  }
 const Material&    Mesh::getMaterial(int index) const { return pimpl->materials[index]; }
