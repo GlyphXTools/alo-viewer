@@ -1,0 +1,335 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8A05CEB8-EE82-4634-9E6C-54AFAE9A1F6F}</ProjectGuid>
+    <RootNamespace>AloViewer</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.25123.0</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(SolutionDir)\libs\expat-2.2.0\include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>comctl32.lib;d3d9.lib;dxerr.lib;d3dx9.lib;dsound.lib;dxguid.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(SolutionDir);C:\Program Files (x86)\Microsoft DirectX SDK (November 2007)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>comctl32.lib;d3d9.lib;dxerr9.lib;d3dx9.lib;dxguid.lib;dsound.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Microsoft DirectX SDK (November 2007)\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>comctl32.lib;d3d9.lib;dxerr.lib;d3dx9.lib;dsound.lib;dxguid.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir);C:\Program Files (x86)\Microsoft DirectX SDK (November 2007)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>comctl32.lib;d3d9.lib;dxerr9.lib;d3dx9.lib;dxguid.lib;dsound.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Microsoft DirectX SDK (November 2007)\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Assets\Animations.cpp" />
+    <ClCompile Include="Assets\Assets.cpp" />
+    <ClCompile Include="Assets\ChunkFile.cpp" />
+    <ClCompile Include="Assets\Files.cpp" />
+    <ClCompile Include="Assets\MegaFile.cpp" />
+    <ClCompile Include="Assets\Models.cpp" />
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="Console.cpp" />
+    <ClCompile Include="Dialogs\AboutDialog.cpp" />
+    <ClCompile Include="Dialogs\CameraDialog.cpp" />
+    <ClCompile Include="Dialogs\DetailsDialog.cpp" />
+    <ClCompile Include="Dialogs\OpenAnimationDialog.cpp" />
+    <ClCompile Include="Dialogs\OpenModelDialog.cpp" />
+    <ClCompile Include="Dialogs\SelectionDialog.cpp" />
+    <ClCompile Include="Dialogs\SelectSubFileDialog.cpp" />
+    <ClCompile Include="Dialogs\SettingsDialog.cpp" />
+    <ClCompile Include="Effects\SurfaceFX.cpp" />
+    <ClCompile Include="Games.cpp" />
+    <ClCompile Include="General\3DTypes.cpp" />
+    <ClCompile Include="General\GameTime.cpp" />
+    <ClCompile Include="General\Log.cpp" />
+    <ClCompile Include="General\Math.cpp" />
+    <ClCompile Include="General\Utils.cpp" />
+    <ClCompile Include="General\XML.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\Effect.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\LightFieldInstance.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\ObjectTemplate.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\ParticleEmitterInstance.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\ParticleRenderers.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\ParticleSystemInstance.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\Render.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\RenderEngine.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\RenderObject.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\VertexFormats.cpp" />
+    <ClCompile Include="RenderEngine\DirectX9\VertexManager.cpp" />
+    <ClCompile Include="RenderEngine\LightSources.cpp" />
+    <ClCompile Include="RenderEngine\Particles\ColorModifierPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\CreatorPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\KillerPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\ParticleSystem.cpp" />
+    <ClCompile Include="RenderEngine\Particles\PhysicsModifierPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\RendererPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\RotationModifierPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\SizeModifierPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\TranslaterPlugins.cpp" />
+    <ClCompile Include="RenderEngine\Particles\UVModifierPlugins.cpp" />
+    <ClCompile Include="RenderEngine\SphericalHarmonics.cpp" />
+    <ClCompile Include="RenderWindow.cpp" />
+    <ClCompile Include="Sound\AnimationSFXMaps.cpp" />
+    <ClCompile Include="Sound\DirectSound8\SoundEngine.cpp" />
+    <ClCompile Include="Sound\SFXEvents.cpp" />
+    <ClCompile Include="Sound\WaveFile.cpp" />
+    <ClCompile Include="UI\ColorButton.cpp" />
+    <ClCompile Include="UI\Spinner.cpp" />
+    <ClCompile Include="UI\UI.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Assets\Animations.h" />
+    <ClInclude Include="Assets\Assets.h" />
+    <ClInclude Include="Assets\ChunkFile.h" />
+    <ClInclude Include="Assets\Files.h" />
+    <ClInclude Include="Assets\MegaFile.h" />
+    <ClInclude Include="Assets\Models.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="Console.h" />
+    <ClInclude Include="Dialogs\Dialogs.h" />
+    <ClInclude Include="Effects\SurfaceFX.h" />
+    <ClInclude Include="Games.h" />
+    <ClInclude Include="General\3DTypes.h" />
+    <ClInclude Include="General\ExactTypes.h" />
+    <ClInclude Include="General\Exceptions.h" />
+    <ClInclude Include="General\GameTime.h" />
+    <ClInclude Include="General\GameTypes.h" />
+    <ClInclude Include="General\Log.h" />
+    <ClInclude Include="General\Math.h" />
+    <ClInclude Include="General\Objects.h" />
+    <ClInclude Include="General\Utils.h" />
+    <ClInclude Include="General\WinUtils.h" />
+    <ClInclude Include="General\XML.h" />
+    <ClInclude Include="RenderEngine\DirectX9\Exceptions.h" />
+    <ClInclude Include="RenderEngine\DirectX9\LightFieldInstance.h" />
+    <ClInclude Include="RenderEngine\DirectX9\ObjectTemplate.h" />
+    <ClInclude Include="RenderEngine\DirectX9\ParticleEmitterInstance.h" />
+    <ClInclude Include="RenderEngine\DirectX9\ParticleRenderers.h" />
+    <ClInclude Include="RenderEngine\DirectX9\ParticleSystemInstance.h" />
+    <ClInclude Include="RenderEngine\DirectX9\RenderEngine.h" />
+    <ClInclude Include="RenderEngine\DirectX9\RenderObject.h" />
+    <ClInclude Include="RenderEngine\DirectX9\Resources.h" />
+    <ClInclude Include="RenderEngine\DirectX9\VertexFormats.h" />
+    <ClInclude Include="RenderEngine\DirectX9\VertexManager.h" />
+    <ClInclude Include="RenderEngine\LightSources.h" />
+    <ClInclude Include="RenderEngine\Particles\CreatorPlugins.h" />
+    <ClInclude Include="RenderEngine\Particles\KillerPlugins.h" />
+    <ClInclude Include="RenderEngine\Particles\ModifierPlugins.h" />
+    <ClInclude Include="RenderEngine\Particles\ParticleSystem.h" />
+    <ClInclude Include="RenderEngine\Particles\Plugin.h" />
+    <ClInclude Include="RenderEngine\Particles\PluginDefs.h" />
+    <ClInclude Include="RenderEngine\Particles\RendererPlugins.h" />
+    <ClInclude Include="RenderEngine\Particles\TranslaterPlugins.h" />
+    <ClInclude Include="RenderEngine\RenderEngine.h" />
+    <ClInclude Include="RenderEngine\SphericalHarmonics.h" />
+    <ClInclude Include="RenderWindow.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Resources\resource.de.h" />
+    <ClInclude Include="Resources\resource.en.h" />
+    <ClInclude Include="Resources\resource.h" />
+    <ClInclude Include="Resources\resource.neu.h" />
+    <ClInclude Include="Sound\AnimationSFXMaps.h" />
+    <ClInclude Include="Sound\DirectSound8\Exceptions.h" />
+    <ClInclude Include="Sound\DirectSound8\SoundEngine.h" />
+    <ClInclude Include="Sound\SFXEvents.h" />
+    <ClInclude Include="Sound\SoundEngine.h" />
+    <ClInclude Include="Sound\WaveFile.h" />
+    <ClInclude Include="UI\UI.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PlaceHolders\alMissingShader_EaW.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alMissingShader_UaW.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alShadowDebug.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alShadowDebugRSkin.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AloViewer.de.rc" />
+    <ResourceCompile Include="AloViewer.en.rc" />
+    <ResourceCompile Include="AloViewer.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="PlaceHolders\missing.png" />
+    <Image Include="Resources\logo.ico" />
+    <Image Include="Resources\loop.ico" />
+    <Image Include="Resources\noloop.ico" />
+    <Image Include="Resources\pause.ico" />
+    <Image Include="Resources\play.ico" />
+    <Image Include="Resources\repeat.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libs\expat-2.2.0\expatw_static.vcxproj">
+      <Project>{3d0991c0-db91-116b-53ef-bbde6d53f949}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

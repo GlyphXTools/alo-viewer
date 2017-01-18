@@ -1,0 +1,468 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\UI">
+      <UniqueIdentifier>{4fe3dded-5a5b-443c-b8f3-c1f120d2e8ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Assets">
+      <UniqueIdentifier>{501863ef-3371-4089-aeff-1e11eb8d2adf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\General">
+      <UniqueIdentifier>{83817c9c-e689-41e0-b87e-7d5cad639483}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RenderEngine">
+      <UniqueIdentifier>{4b77b924-96f5-4508-bc81-3f76eb85c67e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RenderEngine\DirectX9">
+      <UniqueIdentifier>{c833fff0-b10c-4c55-b8c3-c2c928b8e1a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\RenderEngine\Particles">
+      <UniqueIdentifier>{6f81e17d-0759-4832-9b8b-5d9162d48e69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Dialogs">
+      <UniqueIdentifier>{57a3d6fc-f6a1-4e2c-be46-07b22c4c8bf2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound">
+      <UniqueIdentifier>{5472b3e7-b8a3-4a7e-af53-dc3a47d94f12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound\DirectSound8">
+      <UniqueIdentifier>{35fa1f58-9154-4c69-a670-fd2d27b10caf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Effects">
+      <UniqueIdentifier>{d147140b-b0cb-4386-977e-cd8e65eba4c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Assets">
+      <UniqueIdentifier>{dfc1bd23-57ef-4b27-811f-3b679a027f22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\General">
+      <UniqueIdentifier>{d5c3c30e-d54f-4c07-9acd-22d4f9c6d3c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\UI">
+      <UniqueIdentifier>{2b983f60-33a8-47dd-a135-6547facd97e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RenderEngine">
+      <UniqueIdentifier>{528043f4-f31b-434e-a8fa-ba1fe078227d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RenderEngine\DirectX9">
+      <UniqueIdentifier>{c6194e2d-4f54-4bf9-8768-56f587b21735}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\RenderEngine\Particles">
+      <UniqueIdentifier>{ebd0a0fe-5779-42db-b907-d8c106be311b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Dialogs">
+      <UniqueIdentifier>{e259f4be-6883-4a62-aadc-8fd2d40c8bbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Sound">
+      <UniqueIdentifier>{abf2b351-da05-4a64-ad0b-d210117e85ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Sound\DirectSound8">
+      <UniqueIdentifier>{08f2184f-dc9a-4033-ab8a-d18138194ac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Effects">
+      <UniqueIdentifier>{53930e10-4979-4aa8-9d88-05dad756bac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Console.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Games.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\ColorButton.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\Spinner.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UI.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\Animations.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\Assets.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\ChunkFile.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\Files.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\MegaFile.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Assets\Models.cpp">
+      <Filter>Source Files\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="General\3DTypes.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="General\GameTime.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="General\Log.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="General\Math.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="General\Utils.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="General\XML.cpp">
+      <Filter>Source Files\General</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\LightSources.cpp">
+      <Filter>Source Files\RenderEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\SphericalHarmonics.cpp">
+      <Filter>Source Files\RenderEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\Effect.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\LightFieldInstance.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\ObjectTemplate.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\ParticleEmitterInstance.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\ParticleRenderers.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\ParticleSystemInstance.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\Render.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\RenderEngine.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\RenderObject.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\VertexFormats.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\DirectX9\VertexManager.cpp">
+      <Filter>Source Files\RenderEngine\DirectX9</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\ColorModifierPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\CreatorPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\KillerPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\ParticleSystem.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\PhysicsModifierPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\RendererPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\RotationModifierPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\SizeModifierPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\TranslaterPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderEngine\Particles\UVModifierPlugins.cpp">
+      <Filter>Source Files\RenderEngine\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\AboutDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\CameraDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\DetailsDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\OpenAnimationDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\OpenModelDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\SelectionDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\SelectSubFileDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\SettingsDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound\AnimationSFXMaps.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound\SFXEvents.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound\WaveFile.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound\DirectSound8\SoundEngine.cpp">
+      <Filter>Source Files\Sound\DirectSound8</Filter>
+    </ClCompile>
+    <ClCompile Include="Effects\SurfaceFX.cpp">
+      <Filter>Source Files\Effects</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Games.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\resource.de.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\resource.en.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\resource.neu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\Animations.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\Assets.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\ChunkFile.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\Files.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\MegaFile.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\Models.h">
+      <Filter>Header Files\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="General\3DTypes.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\ExactTypes.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\Exceptions.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\GameTime.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\GameTypes.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\Log.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\Math.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\Objects.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\Utils.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\WinUtils.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="General\XML.h">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UI.h">
+      <Filter>Header Files\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\LightSources.h">
+      <Filter>Header Files\RenderEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\RenderEngine.h">
+      <Filter>Header Files\RenderEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\SphericalHarmonics.h">
+      <Filter>Header Files\RenderEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\Exceptions.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\LightFieldInstance.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\ObjectTemplate.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\ParticleEmitterInstance.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\ParticleRenderers.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\ParticleSystemInstance.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\RenderEngine.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\RenderObject.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\Resources.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\VertexFormats.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\DirectX9\VertexManager.h">
+      <Filter>Header Files\RenderEngine\DirectX9</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\CreatorPlugins.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\KillerPlugins.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\ModifierPlugins.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\ParticleSystem.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\Plugin.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\PluginDefs.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\RendererPlugins.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderEngine\Particles\TranslaterPlugins.h">
+      <Filter>Header Files\RenderEngine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Dialogs\Dialogs.h">
+      <Filter>Header Files\Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\AnimationSFXMaps.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\SFXEvents.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\SoundEngine.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\WaveFile.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\DirectSound8\Exceptions.h">
+      <Filter>Header Files\Sound\DirectSound8</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound\DirectSound8\SoundEngine.h">
+      <Filter>Header Files\Sound\DirectSound8</Filter>
+    </ClInclude>
+    <ClInclude Include="Effects\SurfaceFX.h">
+      <Filter>Header Files\Effects</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PlaceHolders\alMissingShader_EaW.fx">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alMissingShader_UaW.fx">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alShadowDebug.fx">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="PlaceHolders\alShadowDebugRSkin.fx">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AloViewer.de.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="AloViewer.en.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="AloViewer.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resources\logo.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\loop.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="PlaceHolders\missing.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\noloop.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\pause.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\play.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\repeat.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
