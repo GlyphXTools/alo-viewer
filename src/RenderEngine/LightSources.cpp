@@ -112,7 +112,7 @@ static LightFieldSource MakeDefaultLightFieldSource()
 
 static void ParseLightFieldSource(const XMLNode* ent)
 {
-    const char* name = ent->getAttribute("Name");
+	const char* name = ent->getName();
     if (name == NULL)
     {
         throw ParseException("Ignoring unnamed light field source");
