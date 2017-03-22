@@ -88,7 +88,7 @@ static INT_PTR CALLBACK FluidDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
         case WM_SIZE:
         {
-            LONG old = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+            LONG_PTR old = GetWindowLongPtr(hWnd, GWLP_USERDATA);
             int dx = (int)LOWORD(lParam) - (int)LOWORD(old);
             int dy = (int)HIWORD(lParam) - (int)HIWORD(old);
             for (HWND hChild = GetWindow(hWnd, GW_CHILD); hChild != NULL; hChild = GetNextWindow(hChild, GW_HWNDNEXT))

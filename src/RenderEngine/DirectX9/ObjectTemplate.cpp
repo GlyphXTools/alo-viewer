@@ -226,7 +226,7 @@ void ObjectTemplate::RenderDazzles(const RenderObject& object) const
         {
             float t = (dazzle.frequency == 0 || dazzle.bias == 1)
                 ? 0.5f
-                : fmod(GetGameTime() * dazzle.frequency + dazzle.phase, 1) / dazzle.bias;
+                : fmodf(GetGameTime() * dazzle.frequency + dazzle.phase, 1) / dazzle.bias;
 
             if (t <= 1)
             {

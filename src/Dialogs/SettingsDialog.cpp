@@ -15,11 +15,11 @@ struct Settings
 
 static void FillEnvironment(HWND hWnd, const Environment& env)
 {
-    SetUIFloat(hWnd, IDC_SPINNER2,  fmod(ToDegrees((-env.m_lights[LT_SUN  ].m_direction).zAngle()) + 90 + 360, 360));
-    SetUIFloat(hWnd, IDC_SPINNER5,  fmod(ToDegrees((-env.m_lights[LT_FILL1].m_direction).zAngle()) + 90 + 360, 360));
-    SetUIFloat(hWnd, IDC_SPINNER8,  fmod(ToDegrees((-env.m_lights[LT_FILL2].m_direction).zAngle()) + 90 + 360, 360));
+    SetUIFloat(hWnd, IDC_SPINNER2,  fmodf(ToDegrees((-env.m_lights[LT_SUN  ].m_direction).zAngle()) + 90 + 360, 360));
+    SetUIFloat(hWnd, IDC_SPINNER5,  fmodf(ToDegrees((-env.m_lights[LT_FILL1].m_direction).zAngle()) + 90 + 360, 360));
+    SetUIFloat(hWnd, IDC_SPINNER8,  fmodf(ToDegrees((-env.m_lights[LT_FILL2].m_direction).zAngle()) + 90 + 360, 360));
     SetUIFloat(hWnd, IDC_SPINNER12, env.m_wind.speed);
-    SetUIFloat(hWnd, IDC_SPINNER10, fmod(ToDegrees(env.m_wind.heading) + 360, 360));
+    SetUIFloat(hWnd, IDC_SPINNER10, fmodf(ToDegrees(env.m_wind.heading) + 360, 360));
 
     SetUIFloat(hWnd, IDC_SPINNER3, ToDegrees(-env.m_lights[LT_SUN  ].m_direction.tilt()));
     SetUIFloat(hWnd, IDC_SPINNER6, ToDegrees(-env.m_lights[LT_FILL1].m_direction.tilt()));

@@ -63,8 +63,8 @@ struct Quaternion : public D3DXQUATERNION
 
 struct Vector3 : public D3DXVECTOR3
 {
-    float   tilt()   const { return atan2(z, sqrt(x*x + y*y)); }
-    float   zAngle() const { return atan2(y, x); }
+    float   tilt()   const { return atan2f(z, sqrtf(x*x + y*y)); }
+    float   zAngle() const { return atan2f(y, x); }
     void    normalize()    { D3DXVec3Normalize(this, this); }
     float   length() const { return D3DXVec3Length(this); }
     float   dot  (const Vector3& v) const { return D3DXVec3Dot(this, &v); }
