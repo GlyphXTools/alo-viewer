@@ -41,7 +41,7 @@ void Initialize()
 {
     const string filename = "SurfaceFX.xml";
     ptr<IFile> file = Assets::LoadFile(filename, XML_PREFIX);
-    if (file != NULL)
+    if (file)
     {
         XMLTree xml;
         try
@@ -60,7 +60,7 @@ void Initialize()
         for (size_t i = 0; i < root->getNumChildren(); i++)
         {
             const XMLNode* ent = root->getChild(i);
-            string name = ent->getAttribute("Name");
+			string name = ent->getName();
             if (!name.empty())
             {
                 ParseSurfaceFX(ent, name);
