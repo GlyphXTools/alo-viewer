@@ -12,3 +12,7 @@ platform:
 configuration:
   - Debug
   - Release
+
+artifacts:
+  - path: '**\AloViewer.exe'
+    name: AloViewer
