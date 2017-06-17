@@ -41,28 +41,28 @@ class XMLNode
 	~XMLNode();
 
 public:
-	bool           isAnonymous() const      { return strcmp(m_name,"") == 0; }
-	const char*    getData() const          { return m_data; }
-	const char*    getName() const          { return m_name; }
+	bool           isAnonymous() const      { return wcscmp(m_name,L"") == 0; }
+	const wchar_t* getData() const          { return m_data; }
+	const wchar_t* getName() const          { return m_name; }
 	const size_t   getNumChildren() const   { return m_children.size(); }
 	const XMLNode* getChild(size_t i) const { return m_children[i]; }
-	bool           equals(const char* name)        const { return _stricmp(m_name, name) == 0; }
-	bool           equals(const std::string& name) const { return equals(name.c_str()); }
+	bool           equals(const wchar_t* name)     const { return _wcsicmp(m_name, name) == 0; }
+	bool           equals(const std::wstring& name) const { return equals(name.c_str()); }
 	
     /* Returns the value of the specified attribute.
      * Returns NULL if the attribute does not exist.
      * @name: case-insensitive name of the attribute.
      */
-	const char* getAttribute(const char* name) const {
+	const wchar_t* getAttribute(const wchar_t* name) const {
         for (AttrList::const_iterator i = m_attributes.begin(); i != m_attributes.end(); i++) {
-            if (_stricmp(i->first, name) == 0) {
+            if (_wcsicmp(i->first, name) == 0) {
                 return i->second;
             }
         }
 		return NULL;
 	}
 
-    const char* getAttribute(const std::string& name) const {
+    const wchar_t* getAttribute(const std::wstring& name) const {
         return getAttribute(name.c_str());
     }
 };

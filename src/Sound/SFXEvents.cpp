@@ -8,18 +8,18 @@ using namespace std;
 
 namespace Alamo {
 
-typedef map<string,SFXEvent> SFXEventMap;
+typedef map<wstring,SFXEvent> SFXEventMap;
 
 static const char* XML_PREFIX = "Data/XML/";
 
 static SFXEventMap m_events;
 static SFXEventMap m_presets;
 
-static bool equals(const char* s1, const char* s2)
+static bool equals(const wchar_t* s1, const wchar_t* s2)
 {
     while (*s1 != '\0' && isspace(*s1)) s1++;
-    size_t len = strlen(s2);
-    if (_strnicmp(s1, s2, len) == 0)
+    size_t len = wcslen(s2);
+    if (_wcsnicmp(s1, s2, len) == 0)
     {
         s1 += len;
         while (*s1 != '\0' && isspace(*s1)) s1++;
@@ -29,29 +29,29 @@ static bool equals(const char* s1, const char* s2)
 }
 
 // We accept "Yes", "True" or "1" as true
-static bool ParseBool(const char* str, bool def)
+static bool ParseBool(const wchar_t* str, bool def)
 {
-    if (equals(str, "Yes"))   return true;
-    if (equals(str, "No"))    return false;
-    if (equals(str, "True"))  return true;
-    if (equals(str, "False")) return false;
+    if (equals(str, L"Yes"))   return true;
+    if (equals(str, L"No"))    return false;
+    if (equals(str, L"True"))  return true;
+    if (equals(str, L"False")) return false;
  
-    char* endptr;
-    long val = strtol(str, &endptr, 0);
+    wchar_t* endptr;
+    long val = wcstol(str, &endptr, 0);
     return (*endptr != '\0') ? def : (val != 0);
 }
 
-static int ParseInt(const char* str, int def)
+static int ParseInt(const wchar_t* str, int def)
 {
-    char* endptr;
-    long val = strtol(str, &endptr, 0);
+	wchar_t* endptr;
+    long val = wcstol(str, &endptr, 0);
     return (*endptr != '\0') ? def : val;
 }
 
-static float ParseFloat(const char* str, float def)
+static float ParseFloat(const wchar_t* str, float def)
 {
-    char* endptr;
-    float val = (float)strtod(str, &endptr);
+	wchar_t* endptr;
+    float val = (float)wcstod(str, &endptr);
     return (*endptr != '\0') ? def : val;
 }
 
@@ -75,7 +75,7 @@ static SFXEvent MakeDefaultSFXEvent()
     return e;
 }
 
-static void CopyPresetData(SFXEvent& e, const char* name)
+static void CopyPresetData(SFXEvent& e, const wchar_t* name)
 {
     // Find and use the preset
     SFXEventMap::const_iterator p = m_presets.find(Uppercase(name));
@@ -102,20 +102,20 @@ static void CopyPresetData(SFXEvent& e, const char* name)
     }
 }
 
-static void ParseSampleList(const string& data, vector<string>& samples)
+static void ParseSampleList(const wstring& data, vector<string>& samples)
 {
-    static const char* whitespace = " \t\r\n\t\v";
+    static const wchar_t* whitespace = L" \t\r\n\t\v";
     string::size_type start, sp = 0;
     while ((start = data.find_first_not_of(whitespace, sp)) != string::npos) {
         sp = data.find_first_of(whitespace, start);
         if (sp == string::npos) {
             sp = data.size();
         }
-        samples.push_back( Uppercase(data.substr(start, sp - start)) );
+        samples.push_back( Uppercase(WideToAnsi(data.substr(start, sp - start))) );
     }
 }
 
-static void ParseSFXEvent(const XMLNode* ent, const char* name)
+static void ParseSFXEvent(const XMLNode* ent, const wchar_t* name)
 {
     SFXEvent e = MakeDefaultSFXEvent();
     
@@ -125,37 +125,37 @@ static void ParseSFXEvent(const XMLNode* ent, const char* name)
     for (size_t i = 0; i < ent->getNumChildren(); i++)
     {
         const XMLNode* node = ent->getChild(i);
-        const char*    data = node->getData();
+        const wchar_t* data = node->getData();
         if (data != NULL)
         {
-                 if (node->equals("IS_PRESET"))           preset           = ParseBool(data, false);
-            else if (node->equals("IS_2D"))               is2D             = ParseBool(data, false);
-            else if (node->equals("IS_3D"))               is3D             = ParseBool(data, false);
-            else if (node->equals("IS_GUI"))              isGUI            = ParseBool(data, false);
-            else if (node->equals("IS_UNIT_RESPONSE_VO")) isUnitResponseVO = ParseBool(data, false);
-            else if (node->equals("IS_AMBIENT_VO"))       isAmbientVO      = ParseBool(data, false);
-            else if (node->equals("IS_HUD_VO"))           isHudVO          = ParseBool(data, false);
-            else if (node->equals("MAX_INSTANCES")) e.maxInstances = max(1, ParseInt(data, e.maxInstances) );
-            else if (node->equals("PRIORITY"))      e.priority     = max(1, ParseInt(data, e.priority) );
-            else if (node->equals("PROBABILITY"))   e.probability  = max(0, min(1, ParseFloat(data, 100) / 100.0f));
-            else if (node->equals("MIN_VOLUME"))    e.volume.min   = max(0, min(1, ParseFloat(data, 100) / 100.0f));
-            else if (node->equals("MAX_VOLUME"))    e.volume.max   = max(0, min(1, ParseFloat(data, 100) / 100.0f));
-            else if (node->equals("MIN_PITCH"))     e.pitch.min    = max(0, min(1, ParseFloat(data, 100) / 100.0f));
-            else if (node->equals("MAX_PITCH"))     e.pitch.max    = max(0, min(1, ParseFloat(data, 100) / 100.0f));
-            else if (node->equals("MIN_PREDELAY"))  e.predelay.min = max(0, ParseFloat(data, 0) / 1000.0f);
-            else if (node->equals("MAX_PREDELAY"))  e.predelay.max = max(0, ParseFloat(data, 0) / 1000.0f);
-            else if (node->equals("PLAY_COUNT"))    e.playCount    = ParseInt(data, 1);
-            else if (node->equals("LOCALIZE"))                   e.localize                 = ParseBool(data, e.localize);
-            else if (node->equals("KILLS_PREVIOUS_OBJECT_SFX"))  e.killsPreviousObjectSFX   = ParseBool(data, e.localize);
-            else if (node->equals("PLAY_SEQUENTIALLY"))          e.playSequentially         = ParseBool(data, e.localize);
-            else if (node->equals("VOLUME_SATURATION_DISTANCE")) e.volumeSaturationDistance = ParseFloat(data, 0);
-            else if (node->equals("LOOP_FADE_IN_SECONDS"))       e.loopFadeOutSeconds       = max(0, ParseFloat(data, 0));
-            else if (node->equals("LOOP_FADE_OUT_SECONDS"))      e.loopFadeInSeconds        = max(0, ParseFloat(data, 0));
-            else if (node->equals("USE_PRESET"))       CopyPresetData(e, data);
-            else if (node->equals("SAMPLES"))          ParseSampleList(data, e.samples);
-            else if (node->equals("PRE_SAMPLES"))      ParseSampleList(data, e.preSamples);
-            else if (node->equals("POST_SAMPLES"))     ParseSampleList(data, e.postSamples);
-            else if (node->equals("CHAINED_SFXEVENT")) e.chainedSFXEvent = data;
+                 if (node->equals(L"IS_PRESET"))           preset           = ParseBool(data, false);
+            else if (node->equals(L"IS_2D"))               is2D             = ParseBool(data, false);
+            else if (node->equals(L"IS_3D"))               is3D             = ParseBool(data, false);
+            else if (node->equals(L"IS_GUI"))              isGUI            = ParseBool(data, false);
+            else if (node->equals(L"IS_UNIT_RESPONSE_VO")) isUnitResponseVO = ParseBool(data, false);
+            else if (node->equals(L"IS_AMBIENT_VO"))       isAmbientVO      = ParseBool(data, false);
+            else if (node->equals(L"IS_HUD_VO"))           isHudVO          = ParseBool(data, false);
+            else if (node->equals(L"MAX_INSTANCES")) e.maxInstances = max(1, ParseInt(data, e.maxInstances) );
+            else if (node->equals(L"PRIORITY"))      e.priority     = max(1, ParseInt(data, e.priority) );
+            else if (node->equals(L"PROBABILITY"))   e.probability  = max(0, min(1, ParseFloat(data, 100) / 100.0f));
+            else if (node->equals(L"MIN_VOLUME"))    e.volume.min   = max(0, min(1, ParseFloat(data, 100) / 100.0f));
+            else if (node->equals(L"MAX_VOLUME"))    e.volume.max   = max(0, min(1, ParseFloat(data, 100) / 100.0f));
+            else if (node->equals(L"MIN_PITCH"))     e.pitch.min    = max(0, min(1, ParseFloat(data, 100) / 100.0f));
+            else if (node->equals(L"MAX_PITCH"))     e.pitch.max    = max(0, min(1, ParseFloat(data, 100) / 100.0f));
+            else if (node->equals(L"MIN_PREDELAY"))  e.predelay.min = max(0, ParseFloat(data, 0) / 1000.0f);
+            else if (node->equals(L"MAX_PREDELAY"))  e.predelay.max = max(0, ParseFloat(data, 0) / 1000.0f);
+            else if (node->equals(L"PLAY_COUNT"))    e.playCount    = ParseInt(data, 1);
+            else if (node->equals(L"LOCALIZE"))                   e.localize                 = ParseBool(data, e.localize);
+            else if (node->equals(L"KILLS_PREVIOUS_OBJECT_SFX"))  e.killsPreviousObjectSFX   = ParseBool(data, e.localize);
+            else if (node->equals(L"PLAY_SEQUENTIALLY"))          e.playSequentially         = ParseBool(data, e.localize);
+            else if (node->equals(L"VOLUME_SATURATION_DISTANCE")) e.volumeSaturationDistance = ParseFloat(data, 0);
+            else if (node->equals(L"LOOP_FADE_IN_SECONDS"))       e.loopFadeOutSeconds       = max(0, ParseFloat(data, 0));
+            else if (node->equals(L"LOOP_FADE_OUT_SECONDS"))      e.loopFadeInSeconds        = max(0, ParseFloat(data, 0));
+            else if (node->equals(L"USE_PRESET"))       CopyPresetData(e, data);
+            else if (node->equals(L"SAMPLES"))          ParseSampleList(data, e.samples);
+            else if (node->equals(L"PRE_SAMPLES"))      ParseSampleList(data, e.preSamples);
+            else if (node->equals(L"POST_SAMPLES"))     ParseSampleList(data, e.postSamples);
+            else if (node->equals(L"CHAINED_SFXEVENT")) e.chainedSFXEvent = WideToAnsi(data);
             // We don't care about these
             //else if (name == "TEXT_ID");
             //else if (name == "OVERLAP_TEST");
@@ -171,9 +171,9 @@ static void ParseSFXEvent(const XMLNode* ent, const char* name)
     else        m_events [Uppercase(name)] = e;
 }
 
-static void ParseSFXEventFile(const string& filename)
+static void ParseSFXEventFile(const wstring& filename)
 {
-    ptr<IFile> file = Assets::LoadFile(filename, XML_PREFIX);
+    ptr<IFile> file = Assets::LoadFile(WideToAnsi(filename), XML_PREFIX);
     if (file != NULL)
     {
         // Parse file
@@ -194,8 +194,8 @@ static void ParseSFXEventFile(const string& filename)
         for (size_t i = 0; i < root->getNumChildren(); i++)
         {
             const XMLNode* ent = root->getChild(i);
-            const char* name = ent->getAttribute("Name");
-            if (name != NULL && strcmp(name, "") != 0)
+            const wchar_t* name = ent->getAttribute(L"Name");
+            if (name != NULL && wcscmp(name, L"") != 0)
             {
                 ParseSFXEvent(ent, name);
             }
@@ -238,7 +238,7 @@ void SFXEvents::Uninitialize()
 
 const SFXEvent* SFXEvents::GetEvent(const string& name)
 {
-    SFXEventMap::const_iterator p = m_events.find(Uppercase(name));
+    SFXEventMap::const_iterator p = m_events.find(Uppercase(AnsiToWide(name)));
     return (p != m_events.end()) ? &p->second : NULL;
 }
 

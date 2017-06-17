@@ -29,13 +29,13 @@ static void onStartElement(void* userData, const XML_Char *name, const XML_Char 
     // Create the node
     XMLNode* node = new XMLNode;
     node->m_parent = tree->m_currentNode;
-    node->m_name   = tree->m_data.append(name, strlen(name) + 1);
+    node->m_name   = tree->m_data.append(name, wcslen(name) + 1);
     node->m_data   = NULL;
 	while (*atts != NULL)
 	{
 		node->m_attributes.push_back(make_pair(
-            tree->m_data.append(atts[0], strlen(atts[0]) + 1),
-            tree->m_data.append(atts[1], strlen(atts[1]) + 1)
+            tree->m_data.append(atts[0], wcslen(atts[0]) + 1),
+            tree->m_data.append(atts[1], wcslen(atts[1]) + 1)
         ));
 		atts += 2;
 	}
@@ -64,11 +64,11 @@ static void onEndElement(void* userData, const XML_Char *name)
 	{
         if (tree->m_currentNode->m_children.empty() && tree->m_currentData.size() > 0)
         {
-            tree->m_currentData.append("", 1); // Append the NUL terminator
+            tree->m_currentData.append(L"", 1); // Append the NUL terminator
 
             // Set the collected node data; but trim it first
-            char* begin = tree->m_currentData;
-            char* end   = tree->m_currentData + tree->m_currentData.size() - 1;
+			wchar_t* begin = tree->m_currentData;
+			wchar_t* end   = tree->m_currentData + tree->m_currentData.size() - 1;
             
             while (begin != end && isspace(*begin)) begin++;
             if (begin != end)
