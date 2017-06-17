@@ -10,13 +10,13 @@ using namespace std;
 namespace Alamo {
 namespace SurfaceFX {
 
-typedef map<string, Effect> EffectMap;
+typedef map<wstring, Effect> EffectMap;
 
 static const char* XML_PREFIX = "Data/XML/";
 
 static EffectMap m_effects;
 
-static void ParseSurfaceFX(const XMLNode* ent, const string& name)
+static void ParseSurfaceFX(const XMLNode* ent, const wstring& name)
 {
     if (ent->getNumChildren() > 0)
     {
@@ -27,10 +27,10 @@ static void ParseSurfaceFX(const XMLNode* ent, const string& name)
         for (size_t i = 0; i < ent->getNumChildren(); i++)
         {
             const XMLNode* node = ent->getChild(i);
-            const char*    data = node->getData();
+            const wchar_t* data = node->getData();
 
-            if (node->equals("SOUNDFX_NAME") && data != NULL) {
-                e.sound = data;
+            if (node->equals(L"SOUNDFX_NAME") && data != NULL) {
+                e.sound = WideToAnsi(data);
             }
         }
         m_effects[Uppercase(name)] = e;
@@ -60,7 +60,7 @@ void Initialize()
         for (size_t i = 0; i < root->getNumChildren(); i++)
         {
             const XMLNode* ent = root->getChild(i);
-			string name = ent->getName();
+			wstring name = ent->getName();
             if (!name.empty())
             {
                 ParseSurfaceFX(ent, name);
@@ -76,7 +76,7 @@ void Uninitialize()
 
 const Effect* GetEffect(const std::string& name)
 {
-    EffectMap::const_iterator p = m_effects.find(Uppercase(name));
+    EffectMap::const_iterator p = m_effects.find(Uppercase(AnsiToWide(name)));
     return (p != m_effects.end()) ? &p->second : NULL;
 }
 

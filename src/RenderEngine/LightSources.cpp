@@ -11,14 +11,14 @@ static const char* XML_PREFIX = "Data/XML/";
 namespace Alamo {
 namespace LightSources {
 
-typedef map<string, LightFieldSource> LightFieldSourceMap;
+typedef map<wstring, LightFieldSource> LightFieldSourceMap;
 static LightFieldSourceMap m_lightsources;
 
-static bool equals(const char* s1, const char* s2)
+static bool equals(const wchar_t* s1, const wchar_t* s2)
 {
     while (*s1 != '\0' && isspace(*s1)) s1++;
-    size_t len = strlen(s2);
-    if (_strnicmp(s1, s2, len) == 0)
+    size_t len = wcslen(s2);
+    if (_wcsnicmp(s1, s2, len) == 0)
     {
         s1 += len;
         while (*s1 != '\0' && isspace(*s1)) s1++;
@@ -27,23 +27,23 @@ static bool equals(const char* s1, const char* s2)
     return false;
 }
 
-static float ParseFloat(const char* str, float def)
+static float ParseFloat(const wchar_t* str, float def)
 {
-    char* endptr;
-    float val = (float)strtod(str, &endptr);
+	wchar_t* endptr;
+    float val = (float)wcstod(str, &endptr);
     return (*endptr != '\0') ? def : val;
 }
 
-static Vector3 ParseVector(const char* str, const Vector3& def)
+static Vector3 ParseVector(const wchar_t* str, const Vector3& def)
 {
-    char* endptr;
-    float x = (float)strtod(str, &endptr);
+	wchar_t* endptr;
+    float x = (float)wcstod(str, &endptr);
     if (*endptr == ',')
     {
-        float y = (float)strtod(endptr + 1, &endptr);
+        float y = (float)wcstod(endptr + 1, &endptr);
         if (*endptr == ',')
         {
-            float z = (float)strtod(endptr + 1, &endptr);
+            float z = (float)wcstod(endptr + 1, &endptr);
             if (*endptr == '\0')
             {
                 return Vector3(x,y,z);
@@ -54,35 +54,35 @@ static Vector3 ParseVector(const char* str, const Vector3& def)
 }
 
 // We accept "Yes", "True" or "1" as true
-static bool ParseBool(const char* str, bool def)
+static bool ParseBool(const wchar_t* str, bool def)
 {
-    if (equals(str, "Yes"))   return true;
-    if (equals(str, "No"))    return false;
-    if (equals(str, "True"))  return true;
-    if (equals(str, "False")) return false;
+    if (equals(str, L"Yes"))   return true;
+    if (equals(str, L"No"))    return false;
+    if (equals(str, L"True"))  return true;
+    if (equals(str, L"False")) return false;
  
-    char* endptr;
-    long val = strtol(str, &endptr, 0);
+	wchar_t* endptr;
+    long val = wcstol(str, &endptr, 0);
     return (*endptr != '\0') ? def : (val != 0);
 }
 
-static LightFieldSourceType ParseType(const char* data)
+static LightFieldSourceType ParseType(const wchar_t* data)
 {
     static const struct {
-        const char*          name;
+        const wchar_t*       name;
         LightFieldSourceType type;
     } Types[] = {
-        {"POINT",              LFT_POINT},
-        {"HCONE",              LFT_HCONE},
-        {"DUAL_HCONE",         LFT_DUAL_HCONE},
-        {"DUAL_OPPOSED_HCONE", LFT_DUAL_OPPOSED_HCONE},
-        {"LINE",               LFT_LINE},
+        {L"POINT",              LFT_POINT},
+        {L"HCONE",              LFT_HCONE},
+        {L"DUAL_HCONE",         LFT_DUAL_HCONE},
+        {L"DUAL_OPPOSED_HCONE", LFT_DUAL_OPPOSED_HCONE},
+        {L"LINE",               LFT_LINE},
         {NULL}
     };
 
     for (int i = 0; Types[i].name != NULL; i++)
     {
-        if (_stricmp(data, Types[i].name) == 0)
+        if (_wcsicmp(data, Types[i].name) == 0)
         {
             return Types[i].type;
         }
@@ -112,7 +112,7 @@ static LightFieldSource MakeDefaultLightFieldSource()
 
 static void ParseLightFieldSource(const XMLNode* ent)
 {
-	const char* name = ent->getName();
+	const wchar_t* name = ent->getName();
     if (name == NULL)
     {
         throw ParseException("Ignoring unnamed light field source");
@@ -122,21 +122,21 @@ static void ParseLightFieldSource(const XMLNode* ent)
     for (size_t i = 0; i < ent->getNumChildren(); i++)
     {
         const XMLNode* node = ent->getChild(i);
-        const char*    data = node->getData();
+        const wchar_t* data = node->getData();
         if (data != NULL)
         {
-                 if (node->equals("TYPE"))                       info.m_type                    = ParseType(data);
-            else if (node->equals("DIFFUSE"))                    info.m_diffuse                 = Color(Vector4(ParseVector(data, Vector3(1,1,1)), 1.0f));
-            else if (node->equals("INTENSITY"))                  info.m_intensity               = ParseFloat(data, 1.0f);
-            else if (node->equals("WIDTH"))                      info.m_width                   = ParseFloat(data, 50.0f); 
-            else if (node->equals("LENGTH"))                     info.m_length                  = ParseFloat(data, 50.0f);
-            else if (node->equals("HEIGHT"))                     info.m_height                  = ParseFloat(data,  1.0f);
-            else if (node->equals("AUTO_DESTRUCT_TIME"))         info.m_autoDestructTime        = ParseFloat(data, 0.0f);
-            else if (node->equals("AUTO_DESTRUCT_FADE_TIME"))    info.m_autoDestructFadeTime    = ParseFloat(data, 0.0f);
-            else if (node->equals("INTENSITY_NOISE_SCALE"))      info.m_intensityNoiseScale     = ParseFloat(data, 0.0f);
-            else if (node->equals("INTENSITY_NOISE_TIME_SCALE")) info.m_intensityNoiseTimeScale = ParseFloat(data, 0.0f);
-            else if (node->equals("ANGULAR_VELOCITY"))           info.m_angularVelocity         = ParseFloat(data, 0.0f);
-            else if (node->equals("IS_AFFECTED_BY_GLOBAL_LIGHT_FIELD_INTENSITY")) info.m_affectedByGlobalIntensity = ParseBool(data, false);
+                 if (node->equals(L"TYPE"))                       info.m_type                    = ParseType(data);
+            else if (node->equals(L"DIFFUSE"))                    info.m_diffuse                 = Color(Vector4(ParseVector(data, Vector3(1,1,1)), 1.0f));
+            else if (node->equals(L"INTENSITY"))                  info.m_intensity               = ParseFloat(data, 1.0f);
+            else if (node->equals(L"WIDTH"))                      info.m_width                   = ParseFloat(data, 50.0f); 
+            else if (node->equals(L"LENGTH"))                     info.m_length                  = ParseFloat(data, 50.0f);
+			else if (node->equals(L"HEIGHT"))                     info.m_height = ParseFloat(data, 1.0f);
+            else if (node->equals(L"AUTO_DESTRUCT_TIME"))         info.m_autoDestructTime        = ParseFloat(data, 0.0f);
+            else if (node->equals(L"AUTO_DESTRUCT_FADE_TIME"))    info.m_autoDestructFadeTime    = ParseFloat(data, 0.0f);
+            else if (node->equals(L"INTENSITY_NOISE_SCALE"))      info.m_intensityNoiseScale     = ParseFloat(data, 0.0f);
+            else if (node->equals(L"INTENSITY_NOISE_TIME_SCALE")) info.m_intensityNoiseTimeScale = ParseFloat(data, 0.0f);
+            else if (node->equals(L"ANGULAR_VELOCITY"))           info.m_angularVelocity         = ParseFloat(data, 0.0f);
+            else if (node->equals(L"IS_AFFECTED_BY_GLOBAL_LIGHT_FIELD_INTENSITY")) info.m_affectedByGlobalIntensity = ParseBool(data, false);
         }
     }
     m_lightsources.insert(make_pair(Uppercase(name), info));
@@ -181,7 +181,7 @@ using namespace LightSources;
 const LightFieldSource* GetLightFieldSource(string name)
 {
     transform(name.begin(), name.end(), name.begin(), toupper);
-    LightFieldSourceMap::const_iterator p = m_lightsources.find(name);
+    LightFieldSourceMap::const_iterator p = m_lightsources.find(AnsiToWide(name));
     return (p != m_lightsources.end()) ? &p->second : NULL;
 }
 
