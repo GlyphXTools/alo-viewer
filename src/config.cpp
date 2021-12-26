@@ -255,6 +255,7 @@ GameMod Config::GetDefaultGameMod()
 	{
         gm.m_game = (GameID)ReadInteger(hKey, L"GameMod_Game", GID_UNKNOWN);
         gm.m_mod  = ReadString(hKey, L"GameMod_Mod");
+        gm.m_steamId  = ReadString(hKey, L"GameMod_SteamId");
         RegCloseKey(hKey);
     }
     return gm;
@@ -268,6 +269,7 @@ void Config::SetDefaultGameMod(const GameMod& gm)
 	{
         WriteInteger(hKey, L"GameMod_Game", gm.m_game);
         WriteString(hKey, L"GameMod_Mod", gm.m_mod);
+        WriteString(hKey, L"GameMod_SteamId", gm.m_steamId);
         RegCloseKey(hKey);
     }
 }

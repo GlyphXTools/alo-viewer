@@ -180,7 +180,9 @@ void Initialize(const vector<wstring>& basepaths)
             for (size_t i = 0; i < root->getNumChildren(); i++)
             {
                 const XMLNode* child = root->getChild(i);
-                IndexMegaFile(*path + child->getData());
+                if (child->getData() != nullptr) {
+                    IndexMegaFile(*path + child->getData());
+                }
             }
         }
         // Could not find or parse master index file, carry on

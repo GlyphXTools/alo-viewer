@@ -1,5 +1,9 @@
 #include "Games.h"
 #include <shlwapi.h>
+#include <fstream>
+#include <locale>
+#include <codecvt>
+#include "General/json.hpp"
 using namespace std;
 
 // Returns the base directory for a game, based on
@@ -58,6 +62,53 @@ static wstring GetBaseDirForGame(GameID game)
     return L"";
 }
 
+// Returns the Steam ID for a game
+// Currently only FoC is on Steam; UaW:EA used to be at 10430 but was taken down
+static int GetSteamIdForGame(GameID game)
+{
+    switch (game)
+    {
+    case GID_EAW_FOC:
+        return 32470;
+
+    case GID_EAW:
+        return 0;
+
+    case GID_UAW_EA:
+        return 0;
+    }
+    return 0;
+}
+
+static wstring GetSteamLibraryPath() {
+    wstring result;
+
+    HKEY hKey = 0;
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Valve\\Steam", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &hKey) != ERROR_SUCCESS) {
+        RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Valve\\Steam", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &hKey);
+    }
+
+    if (hKey != 0)
+    {
+        DWORD type, size = MAX_PATH;
+        TCHAR path[MAX_PATH];
+        if (RegQueryValueEx(hKey, L"InstallPath", NULL, &type, (LPBYTE)path, &size) == ERROR_SUCCESS)
+        {
+            if (PathIsDirectory(path))
+            {
+                result = path;
+            }
+        }
+        RegCloseKey(hKey);
+    }
+
+    return result;
+}
+
+static wstring GetSteamWorkshopPath() {
+    return GetSteamLibraryPath() + L"\\steamapps\\workshop\\content\\";
+}
+
 // Returns the GameMod identifier for a file
 GameMod GameMod::GetForFile(const std::wstring& path)
 {
@@ -78,7 +129,7 @@ GameMod GameMod::GetForFile(const std::wstring& path)
 wstring GameMod::GetBaseDir() const
 {
     wstring path = GetBaseDirForGame(m_game);
-    if (!m_mod.empty())
+    if (!m_mod.empty() && m_steamId.empty())
     {
         // It's a mod, append modpath
         wstring modpath = path + L"\\Mods\\" + m_mod;
@@ -86,6 +137,14 @@ wstring GameMod::GetBaseDir() const
             return modpath;
         }
     }
+    else if (!m_mod.empty() && !m_steamId.empty()) {
+        // It's a Steam mod, return appropriate Steam Workshop directory
+        wstring modpath = GetSteamWorkshopPath() + to_wstring(GetSteamIdForGame(m_game)) + L"\\" + m_steamId;
+        if (PathIsDirectory(modpath.c_str())) {
+            return modpath;
+        }
+    }
+
     return path;
 }
 
@@ -98,10 +157,7 @@ void GameMod::AppendAssetDirs(std::vector<std::wstring>& basedirs) const
     case GID_EAW_FOC:
         if (!(gamepath = GetBaseDirForGame(GID_EAW_FOC)).empty()) {
             if (!m_mod.empty()) {
-                modpath = gamepath + L"\\Mods\\" + m_mod;
-                if (PathIsDirectory(modpath.c_str())) {
-                    basedirs.push_back(modpath);
-                }
+                basedirs.push_back(GetBaseDir());
             }
             basedirs.push_back(gamepath);
         }
@@ -124,10 +180,7 @@ void GameMod::AppendAssetDirs(std::vector<std::wstring>& basedirs) const
     case GID_UAW_EA:
         if (!(gamepath = GetBaseDirForGame(GID_UAW_EA)).empty()) {
             if (!m_mod.empty()) {
-                modpath = gamepath + L"\\Mods\\" + m_mod;
-                if (PathIsDirectory(modpath.c_str())) {
-                    basedirs.push_back(modpath);
-                }
+                basedirs.push_back(GetBaseDir());
             }
             basedirs.push_back(gamepath);
         }
@@ -159,6 +212,42 @@ static void GetMods(GameID game, std::vector<GameMod>& gamemods)
                 }
             } while (FindNextFile(hFind, &wfd));
             FindClose(hFind);
+        }
+    }
+
+    int steamId;
+    if ((steamId = GetSteamIdForGame(game)) != 0) {
+        if (!GetSteamLibraryPath().empty()) {
+            wstring gameWorkshopPath = GetSteamWorkshopPath() + to_wstring(steamId);
+
+            WIN32_FIND_DATA wfd;
+            HANDLE hFind = FindFirstFile((gameWorkshopPath + L"\\*.*").c_str(), &wfd);
+            if (hFind != INVALID_HANDLE_VALUE)
+            {
+                do {
+                    if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && wcscmp(wfd.cFileName, L".") != 0 && wcscmp(wfd.cFileName, L"..") != 0) {
+                        // It's a mod directory
+                        // Try to load modinfo.json which, if it exists, should include the mod's name
+                        std::wstring modName = wfd.cFileName;
+                        std::ifstream modinfoFile(gameWorkshopPath + L"\\" + wfd.cFileName + L"\\modinfo.json");
+                        if (modinfoFile.good()) {
+                            nlohmann::json modinfoJson;
+                            modinfoFile >> modinfoJson;
+                            if (modinfoJson.contains("name")) {
+                                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+                                modName = converter.from_bytes(modinfoJson["name"]);
+                            }
+                            else if (modinfoJson.contains("steamdata") && modinfoJson["steamdata"].contains("title")) {
+                                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+                                modName = converter.from_bytes(modinfoJson["steamdata"]["title"]);
+                            }
+                        }
+
+                        gamemods.push_back(GameMod(game, modName, wfd.cFileName));
+                    }
+                } while (FindNextFile(hFind, &wfd));
+                FindClose(hFind);
+            }
         }
     }
 

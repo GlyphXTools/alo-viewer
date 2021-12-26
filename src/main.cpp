@@ -606,6 +606,7 @@ static void InitializeGameMenu(ApplicationInfo* info)
             m->second.menuitem = id;
         }
         
+        static bool listedAllSteamMods = true;
         if (!p->first.m_mod.empty())
         {
             // It's a mod
@@ -614,7 +615,16 @@ static void InitializeGameMenu(ApplicationInfo* info)
                 // It's the first mod for this game, add separator
                 AppendMenu(hGame, MF_SEPARATOR, 0, NULL);
                 q.first->second.second = true;
+                if (!p->first.m_steamId.empty()) {
+                    listedAllSteamMods = false;
+                }
             }
+
+            if (!listedAllSteamMods && p->first.m_steamId.empty()) {
+                AppendMenu(hGame, MF_SEPARATOR, 0, NULL);
+                listedAllSteamMods = true;
+            }
+
             id = q.first->second.first++;
             info->gameModLookup[id] = p;
             p->second.menuitem = id;
