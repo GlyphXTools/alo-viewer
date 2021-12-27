@@ -285,18 +285,20 @@ BEGIN
     LTEXT           "Verknüpft mit Bone:",IDC_STATIC,8,24,88,8
 END
 
-IDD_ABOUT DIALOGEX 0, 0, 436, 207
+IDD_ABOUT DIALOGEX 0, 0, 436, 288
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,191,184,50,14
+    DEFPUSHBUTTON   "OK",IDOK,191,266,50,14
     LTEXT           "Alamo Object Viewer %d.%d",IDC_VERSION,7,7,137,8
     LTEXT           "Produktionsdatum: %hs",IDC_BUILDDATE,7,16,137,8
     LTEXT           "Copyright (c) 2008 Mike Lankamp",IDC_STATIC,7,25,137,8
-    LTEXT           "<disclaimer>",IDC_DISCLAIMER,7,136,422,42
+    LTEXT           "<disclaimer>",IDC_DISCLAIMER,7,218,422,42
     LTEXT           "<copyright>",IDC_EXPAT_COPYRIGHT,16,53,406,84
     GROUPBOX        "Expat License",IDC_STATIC,7,41,422,89
+    LTEXT           "<copyright>", IDC_NLOHMANNJSON_COPYRIGHT, 16, 143, 406, 71
+    GROUPBOX        "NLohmann JSON License", IDC_STATIC, 7, 131, 422, 81
 END
 
 
@@ -463,7 +465,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 429
         TOPMARGIN, 7
-        BOTTOMMARGIN, 198
+        BOTTOMMARGIN, 288
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -560,6 +562,7 @@ BEGIN
     IDS_DETAILS_LIGHT_DIRECTIONAL "Directional light"
     IDS_DETAILS_LIGHT_SPOT  "Spotlight"
     IDS_DETAILS_PARAM_TEXTURE "Textur"
+    IDS_NLOHMANNJSON_COPYRIGHT "Copyright (c) 2013-2019 Niels Lohmann <http://nlohmann.me>.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."
 END
 
 #endif    // German (Germany) resources

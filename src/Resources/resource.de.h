@@ -76,6 +76,7 @@
 #define IDS_DETAILS_LIGHT_SPOT          178
 #define IDS_STRING179                   179
 #define IDS_DETAILS_PARAM_TEXTURE       179
+#define IDS_NLOHMANNJSON_COPYRIGHT      180
 #define IDC_EDIT1                       1002
 #define IDC_SAVE                        1003
 #define IDC_LOAD                        1004
@@ -162,6 +163,7 @@
 #define IDC_RADIUS                      1040
 #define IDC_NIGHTONLY                   1041
 #define IDC_SPINNER12                   1042
+#define IDC_NLOHMANNJSON_COPYRIGHT      1043
 #define ID_FILE_OPENMODEL               40001
 #define ID_FILE_OPENANIMATION           40002
 #define ID_FILE_EXIT                    40003

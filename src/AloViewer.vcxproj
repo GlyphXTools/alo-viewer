@@ -267,6 +267,7 @@
     <ClInclude Include="General\Exceptions.h" />
     <ClInclude Include="General\GameTime.h" />
     <ClInclude Include="General\GameTypes.h" />
+    <ClInclude Include="General\json.hpp" />
     <ClInclude Include="General\Log.h" />
     <ClInclude Include="General\Math.h" />
     <ClInclude Include="General\Objects.h" />
@@ -353,6 +354,9 @@
     <ProjectReference Include="..\libs\expat-2.2.0\expatw_static.vcxproj">
       <Project>{3d0991c0-db91-116b-53ef-bbde6d53f949}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\resource.en" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

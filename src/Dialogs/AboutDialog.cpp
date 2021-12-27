@@ -27,6 +27,9 @@ INT_PTR CALLBACK AboutProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             wstring copyright = LoadString(IDS_EXPAT_COPYRIGHT);
             SetWindowText(GetDlgItem(hWnd, IDC_EXPAT_COPYRIGHT), copyright.c_str());
 
+            copyright = LoadString(IDS_NLOHMANNJSON_COPYRIGHT);
+            SetWindowText(GetDlgItem(hWnd, IDC_NLOHMANNJSON_COPYRIGHT), copyright.c_str());
+
             wstring disclaimer = LoadString(IDS_DISCLAIMER);
             SetWindowText(GetDlgItem(hWnd, IDC_DISCLAIMER), disclaimer.c_str());
 

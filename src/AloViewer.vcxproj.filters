@@ -416,6 +416,9 @@
     <ClInclude Include="Effects\SurfaceFX.h">
       <Filter>Header Files\Effects</Filter>
     </ClInclude>
+    <ClInclude Include="General\json.hpp">
+      <Filter>Header Files\General</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PlaceHolders\alMissingShader_EaW.fx">
@@ -464,5 +467,8 @@
     <Image Include="Resources\repeat.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\resource.en" />
   </ItemGroup>
 </Project>

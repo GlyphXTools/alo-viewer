@@ -9,7 +9,7 @@ namespace Config
 {
 // Application version
 static const int      VERSION_MAJOR = 1;
-static const int      VERSION_MINOR = 2;
+static const int      VERSION_MINOR = 3;
 
 // Title of the main window
 static const wchar_t* WINDOW_TITLE  = L"Alamo Object Viewer";
