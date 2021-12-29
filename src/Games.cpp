@@ -4,6 +4,7 @@
 #include <locale>
 #include <codecvt>
 #include "General/json.hpp"
+#include "General/Log.h"
 using namespace std;
 
 // Returns the base directory for a game, based on
@@ -231,15 +232,20 @@ static void GetMods(GameID game, std::vector<GameMod>& gamemods)
                         std::wstring modName = wfd.cFileName;
                         std::ifstream modinfoFile(gameWorkshopPath + L"\\" + wfd.cFileName + L"\\modinfo.json");
                         if (modinfoFile.good()) {
-                            nlohmann::json modinfoJson;
-                            modinfoFile >> modinfoJson;
-                            if (modinfoJson.contains("name")) {
-                                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-                                modName = converter.from_bytes(modinfoJson["name"]);
+                            try {
+                                nlohmann::json modinfoJson;
+                                modinfoFile >> modinfoJson;
+                                if (modinfoJson.contains("name")) {
+                                    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+                                    modName = converter.from_bytes(modinfoJson["name"]);
+                                }
+                                else if (modinfoJson.contains("steamdata") && modinfoJson["steamdata"].contains("title")) {
+                                    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+                                    modName = converter.from_bytes(modinfoJson["steamdata"]["title"]);
+                                }
                             }
-                            else if (modinfoJson.contains("steamdata") && modinfoJson["steamdata"].contains("title")) {
-                                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-                                modName = converter.from_bytes(modinfoJson["steamdata"]["title"]);
+                            catch (nlohmann::json::parse_error ex) {
+                                Log::WriteError("Steam mod %s has malformed modinfo.json\n%s\n", wfd.cFileName, ex.what());
                             }
                         }
 
