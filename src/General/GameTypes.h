@@ -27,6 +27,7 @@ struct RenderSettings
     bool          m_heatDistortion;
     bool          m_heatDebug;
     bool          m_shadowDebug;
+    Color         m_modelColor;
 };
 
 struct Range

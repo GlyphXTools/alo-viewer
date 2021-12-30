@@ -7,6 +7,7 @@ struct ColorButtonControl
 	UINT     msgColorOkString;
 	HWND     hWnd;
 	COLORREF color;
+	bool     isSelected;
 };
 
 static ColorButtonControl* activeDialog = NULL;
@@ -61,6 +62,7 @@ static LRESULT CALLBACK ColorButtonWindowProc(HWND hWnd, UINT uMsg, WPARAM wPara
 			control->msgColorOkString = RegisterWindowMessage(COLOROKSTRING);
 			control->hWnd  = hWnd;
 			control->color = RGB(0,0,0);
+			control->isSelected = false;
 			SetWindowLong(hWnd, GWLP_USERDATA, (LONG)(LONG_PTR)control);
 			break;
 		}
@@ -112,13 +114,31 @@ static LRESULT CALLBACK ColorButtonWindowProc(HWND hWnd, UINT uMsg, WPARAM wPara
 			PAINTSTRUCT ps;
 			HDC hDC = BeginPaint(hWnd, &ps);
 
-			HPEN   hPen   = CreatePen(PS_SOLID, 1, RGB(0,0,0));
-			HBRUSH hBrush = CreateSolidBrush( control->color);
+			HPEN   hPen;
+			if (control->isSelected) {
+				hPen = CreatePen(PS_SOLID, 5, GetSysColor(COLOR_HIGHLIGHT));
+			}
+			else {
+				hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+			}
+
+			COLORREF oldBkColor = SetBkColor(hDC, control->color);
+			int oldBkMode = SetBkMode(hDC, OPAQUE);
+			LOGBRUSH lb = {
+				BS_HATCHED,
+				RGB(128, 128, 128),
+				HS_BDIAGONAL,
+			};
+
+			HBRUSH hBrush = CreateBrushIndirect(&lb);
+
 			SelectObject(hDC, hPen);
 			SelectObject(hDC, hBrush);
 			Rectangle(hDC, 0, 0, client.right, client.bottom);
 			DeleteObject(hBrush);
 			DeleteObject(hPen);
+			SetBkColor(hDC, oldBkColor);
+			SetBkMode(hDC, oldBkMode);
 
 			EndPaint(hWnd, &ps);
 			break;
@@ -151,6 +171,16 @@ Color ColorButton_GetColor(HWND hWnd)
             GetBValue(control->color) / 255.0f, 1.0f);
 	}
 	return Color(0,0,0,0);
+}
+
+void ColorButton_SetSelected(HWND hWnd, bool selected)
+{
+	ColorButtonControl* control = (ColorButtonControl*)(LONG_PTR)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	if (control != NULL)
+	{
+		control->isSelected = selected;
+		RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+	}
 }
 
 bool ColorButton_Initialize(HINSTANCE hInstance)

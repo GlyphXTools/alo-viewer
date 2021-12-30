@@ -75,6 +75,7 @@ static void SetUIFloat(HWND hDlg, int nIDDlgItem, float f)
 
 void ColorButton_SetColor(HWND hWnd, const Alamo::Color& color);
 Alamo::Color ColorButton_GetColor(HWND hWnd);
+void ColorButton_SetSelected(HWND hWnd, bool selected);
 
 /* 
  * Global UI functions

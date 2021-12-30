@@ -42,7 +42,7 @@ struct GameMod
         }
         else {
             // A Steam mod and a non-Steam mod are sorted by game, then Steam mods first
-            return (m_game < rhs.m_game) || !m_steamId.empty();
+            return (m_game < rhs.m_game) || (m_game == rhs.m_game && !m_steamId.empty());
         }
     }
 
@@ -52,6 +52,7 @@ struct GameMod
     std::wstring GetBaseDir() const;
     void AppendAssetDirs(std::vector<std::wstring>& basedirs) const;
     bool IsValid() const;
+    bool IsBaseGame() const;
 
     // Constructors
     GameMod(GameID game = GID_UNKNOWN) : m_game(game) {}

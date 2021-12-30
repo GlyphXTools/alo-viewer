@@ -10,6 +10,7 @@
 #include "General/Log.h"
 #include "General/GameTime.h"
 #include "General/WinUtils.h"
+#include "General/XML.h"
 #include "Dialogs/Dialogs.h"
 #include "RenderWindow.h"
 #include "Console.h"
@@ -59,6 +60,7 @@ struct ApplicationInfo : public Dialogs::ISelectionCallback
     HWND hLoopButton;
     HWND hBackgroundLabel; 
     HWND hBackgroundBtn;
+    HWND hModelColorBtn;
     HWND hColorsLabel;
     HWND hColorBtn[Config::NUM_PREDEFINED_COLORS];
     bool isMinimized;
@@ -85,7 +87,8 @@ struct ApplicationInfo : public Dialogs::ISelectionCallback
     string             animationName;
     ptr<IRenderObject> object;
     unsigned int       selectedColor;
-    const COLORREF*    predefinedColors;
+    vector<COLORREF>   teamColors;
+    void LoadTeamColors();
 
     // File history
     map<ULONGLONG, wstring> history;
@@ -233,13 +236,7 @@ static void SetActiveGameMod(ApplicationInfo* info, GameModList::const_iterator 
     // Switch render engine
     SetRenderWindowGameEngine(info->hRenderWnd, game);
     info->engine           = GetRenderEngine(info->hRenderWnd);
-    info->predefinedColors = NULL;
-    switch (game)
-    {
-        case GID_EAW:
-        case GID_EAW_FOC: info->predefinedColors = Config::PREDEFINED_COLORS_EAW; break;
-        case GID_UAW_EA:  info->predefinedColors = Config::PREDEFINED_COLORS_UAW; break;
-    }
+    info->LoadTeamColors();
     for (int i = 0; i < Config::NUM_PREDEFINED_COLORS; i++)
     {
         RedrawWindow(info->hColorBtn[i], NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
@@ -263,9 +260,12 @@ static void SetActiveGameMod(ApplicationInfo* info, GameModList::const_iterator 
         // acting upon the UI state change.
         ptr<IRenderObject> object = info->engine->CreateRenderObject(templ, 0, 9);
 
-        if (info->predefinedColors != NULL)
+        if (info->selectedColor < info->teamColors.size())
         {
-            object->SetColorization(ColorRefToColor(info->predefinedColors[info->selectedColor]));
+            object->SetColorization(ColorRefToColor(info->teamColors[info->selectedColor]));
+        }
+        else if (info->selectedColor == Config::NUM_PREDEFINED_COLORS) {
+            object->SetColorization(ColorButton_GetColor(info->hModelColorBtn));
         }
 
         Dialogs::Selection_ResetObject(info->hSelection, object);
@@ -366,9 +366,12 @@ static void OnModelLoaded(ApplicationInfo* info, ptr<Model> model, ptr<MegaFile>
             // acting upon the UI state change.
             ptr<IRenderObject> object = info->engine->CreateRenderObject(templ, 0, 9);
         
-            if (info->predefinedColors != NULL)
+            if (info->selectedColor < info->teamColors.size())
             {
-                object->SetColorization(ColorRefToColor(info->predefinedColors[info->selectedColor]));
+                object->SetColorization(ColorRefToColor(info->teamColors[info->selectedColor]));
+            }
+            else if (info->selectedColor == Config::NUM_PREDEFINED_COLORS) {
+                object->SetColorization(ColorButton_GetColor(info->hModelColorBtn));
             }
 
             Dialogs::Selection_SetObject(info->hSelection, object, megaFile, filename);
@@ -965,13 +968,7 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	        }
             SetRenderWindowOptions(info->hRenderWnd, Dialogs::Settings_GetRenderOptions(info->hSettings));
             info->engine           = GetRenderEngine(info->hRenderWnd);
-            info->predefinedColors = NULL;
-            switch (game)
-            {
-                case GID_EAW:
-                case GID_EAW_FOC: info->predefinedColors = Config::PREDEFINED_COLORS_EAW; break;
-                case GID_UAW_EA:  info->predefinedColors = Config::PREDEFINED_COLORS_UAW; break;
-            }
+            info->LoadTeamColors();
 
             //
             // Create the child windows
@@ -999,6 +996,14 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 					return -1;
 				}
 			}
+
+            if ((info->hModelColorBtn = CreateWindowEx(0, L"ColorButton", NULL, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_OWNERDRAW,
+                settings.right + 70 + Config::NUM_PREDEFINED_COLORS * 28, 4, 24, 24, hWnd, NULL, pcs->hInstance, NULL)) == NULL)
+            {
+                return -1;
+            }
+            RenderSettings renderSettings = info->engine->GetSettings();
+            ColorButton_SetColor(info->hModelColorBtn, renderSettings.m_modelColor);
 
             label = LoadString(IDS_INTERFACE_BACKGROUND);
             if ((info->hBackgroundLabel = CreateWindowEx(0, L"STATIC", label.c_str(), WS_CHILD | WS_VISIBLE,
@@ -1069,13 +1074,13 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             // Find the index of the button
 			COLORREF color = RGB(0,0,0);
             int i = -1;
-            if (info->predefinedColors != NULL)
+            if (info->teamColors.size() == Config::NUM_PREDEFINED_COLORS)
             {
                 for (i = 0; i < Config::NUM_PREDEFINED_COLORS - 1; i++)
 			    {
 				    if (info->hColorBtn[i] == dis->hwndItem)
 				    {
-                        color = info->predefinedColors[i];
+                        color = info->teamColors[i];
 					    break;
 				    }
 			    }
@@ -1089,7 +1094,10 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 					    // Clear previous
 					    InvalidateRect(info->hColorBtn[previous], NULL, TRUE);
 					    UpdateWindow(info->hColorBtn[previous]);
-				    }
+                    }
+                    else {
+                        ColorButton_SetSelected(info->hModelColorBtn, false);
+                    }
 			    }
             }
 
@@ -1218,6 +1226,48 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
                     info->engine->SetEnvironment(environment);
                     RedrawWindow(info->hRenderWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 				}
+                else if (hControl == info->hModelColorBtn)
+				{
+					// The model color has changed
+                    if (info->selectedColor < Config::NUM_PREDEFINED_COLORS) {
+                        // Deselect the previously-selected color button
+                        HDC hDC = GetDC(info->hColorBtn[info->selectedColor]);
+                        RECT rc;
+                        GetClientRect(info->hColorBtn[info->selectedColor], &rc);
+                        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+                        HBRUSH hBrush;
+                        if (info->selectedColor < Config::NUM_PREDEFINED_COLORS - 1) {
+                            hBrush = CreateSolidBrush(info->teamColors[info->selectedColor]);
+                        }
+                        else {
+                            LOGBRUSH lb = {
+                                BS_HATCHED,
+                                RGB(128,128,128),
+                                HS_BDIAGONAL,
+                            };
+                            hBrush = CreateBrushIndirect(&lb);
+                        }
+
+                        SelectObject(hDC, hBrush);
+                        SelectObject(hDC, hPen);
+                        Rectangle(hDC, rc.left, rc.top, rc.right, rc.bottom);
+                        DeleteObject(hBrush);
+                        DeleteObject(hPen);
+
+                        info->selectedColor = Config::NUM_PREDEFINED_COLORS;
+
+                        // Draw the selection box around this color button
+                        ColorButton_SetSelected(hControl, true);
+                    }
+                    Color modelColor = ColorButton_GetColor(hControl);
+                    if (info->object != NULL) {
+                        info->object->SetColorization(modelColor);
+                        RedrawWindow(info->hRenderWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+                    }
+                    RenderSettings settings = info->engine->GetSettings();
+                    settings.m_modelColor = modelColor;
+                    info->engine->SetSettings(settings);
+                }
 			}
 			else if (code == LBN_SELCHANGE || code == BN_CLICKED)
 			{
@@ -1259,13 +1309,13 @@ static LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 				{
 					info->playLoop = !info->playLoop;
 				}
-                else if (info->object != NULL && info->predefinedColors != NULL)
+                else if (info->object != NULL && info->teamColors.size() >= Config::NUM_PREDEFINED_COLORS)
                 {
                     for (int i = 0; i < Config::NUM_PREDEFINED_COLORS; i++)
                     {
                         if (info->hColorBtn[i] == hControl)
                         {
-                            info->object->SetColorization(ColorRefToColor(info->predefinedColors[i]));
+                            info->object->SetColorization(ColorRefToColor(info->teamColors[i]));
                             RedrawWindow(info->hRenderWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
                             break;
                         }
@@ -1442,6 +1492,48 @@ ApplicationInfo::~ApplicationInfo()
     AnimationSFXMaps::Uninitialize();
     SFXEvents::Uninitialize();
     Assets::Uninitialize();
+}
+
+void ApplicationInfo::LoadTeamColors() {
+    teamColors.clear();
+    if (activeGameMod == gameMods.end()) {
+        return;
+    }
+    GameMod mod = activeGameMod->first;
+
+    // First, add the default colors
+    switch (mod.m_game)
+    {
+        case GID_EAW:
+        case GID_EAW_FOC: teamColors.insert(teamColors.begin(), Config::PREDEFINED_COLORS_EAW, Config::PREDEFINED_COLORS_EAW + Config::NUM_PREDEFINED_COLORS); break;
+        case GID_UAW_EA:  teamColors.insert(teamColors.begin(), Config::PREDEFINED_COLORS_UAW, Config::PREDEFINED_COLORS_UAW + Config::NUM_PREDEFINED_COLORS); break;
+    }
+
+    // Then, if we are loading a mod, replace the defaults with the ones defined in GameConstants.xml, if it exists
+    // Any colors not defined in GameConstants.xml will remain the default color, including our white/no color entry
+    if (!mod.IsBaseGame()) {
+        XMLTree xml;
+        ptr<IFile> gameConstantsFile = Assets::LoadFile("GameConstants.xml", "Data/XML/");
+        if (gameConstantsFile != NULL) {
+            try {
+                xml.parse(gameConstantsFile);
+                const XMLNode* root = xml.getRoot();
+                for (size_t i = 0; i < root->getNumChildren(); i++)
+                {
+                    const XMLNode* ent = root->getChild(i);
+                    for (int j = 0; j < _countof(Config::MP_COLOR_NAMES); j++) {
+                        wstring name = ent->getName();
+                        if (name == Config::MP_COLOR_NAMES[j]) {
+                            COLORREF color = Config::ParseMPColor(ent->getData());
+                            teamColors[j] = color;
+                        }
+                    }
+                }
+            }
+            catch (ParseException&) {}
+        }
+    }
+    return;
 }
 
 // Initialize all modules

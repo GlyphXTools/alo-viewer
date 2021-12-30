@@ -195,6 +195,10 @@ bool GameMod::IsValid() const
     return !GetBaseDir().empty();
 }
 
+bool GameMod::IsBaseGame() const {
+    return m_mod.empty() && m_steamId.empty();
+}
+
 // Appends the game and the mods for the game to the list
 static void GetMods(GameID game, std::vector<GameMod>& gamemods)
 {

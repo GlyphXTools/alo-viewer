@@ -79,6 +79,24 @@ static void WriteString(HKEY hKey, LPCTSTR name, const wstring& str)
 // Main Functions
 // =========================================
 
+COLORREF Config::ParseMPColor(const wstring& name) {
+    vector<wstring> colors = {L"", L"", L""};
+    size_t currentColor = 0;
+    bool numberDone = false;
+    for (wstring::const_iterator it = name.begin(); it < name.end(); it++) {
+        if (isdigit(*it) && colors[currentColor].size() < 3) {
+            colors[currentColor].push_back(*it);
+            numberDone = false;
+        }
+        else if (currentColor < colors.size() - 1 && !numberDone) {
+            ++currentColor;
+            numberDone = true;
+        }
+    }
+
+    return RGB(_wtoi(colors[0].c_str()), _wtoi(colors[1].c_str()), _wtoi(colors[2].c_str()));
+}
+
 RenderSettings Config::GetRenderSettings()
 {
 	HKEY hKey = NULL;
@@ -93,6 +111,7 @@ RenderSettings Config::GetRenderSettings()
     settings.m_heatDistortion = ReadInteger(hKey, L"HeatDistortion", true ) != 0;
     settings.m_heatDebug      = ReadInteger(hKey, L"HeatDebug",      false) != 0;
     settings.m_shadowDebug    = ReadInteger(hKey, L"ShadowDebug",    false) != 0;
+    ReadColor(hKey, L"ModelColor", &settings.m_modelColor);
     RegCloseKey(hKey);
     return settings;
 }
@@ -110,6 +129,7 @@ void Config::SetRenderSettings(const RenderSettings& settings)
         WriteInteger(hKey, L"HeatDistortion", settings.m_heatDistortion);
         WriteInteger(hKey, L"HeatDebug",      settings.m_heatDebug);
         WriteInteger(hKey, L"ShadowDebug",    settings.m_shadowDebug);
+        WriteColor(hKey,   L"ModelColor",     settings.m_modelColor);
     }
 }
 
