@@ -103,10 +103,22 @@ void QuadParticleRenderer::RenderParticles(Effect& effect) const
     {
         if (effect.BeginPass(i))
         {
-            OverrideStates(pDevice, i);
-            pDevice->DrawIndexedPrimitiveUP(D3DPT_TRIANGLELIST, 0, (UINT)m_vertices.size() * 4, (UINT)m_indices.size() * 2, &m_indices[0].i[0], D3DFMT_INDEX16, &m_vertices[0].v[0], sizeof(ParticleVertex));
+            try {
+                OverrideStates(pDevice, i);
+                pDevice->DrawIndexedPrimitiveUP(D3DPT_TRIANGLELIST, 0, (UINT)m_vertices.size() * 4, (UINT)m_indices.size() * 2, &m_indices[0].i[0], D3DFMT_INDEX16, &m_vertices[0].v[0], sizeof(ParticleVertex));
+            }
+            catch (...) {
+#ifndef NDEBUG
+                HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+                CONSOLE_SCREEN_BUFFER_INFO cSBI;
+                GetConsoleScreenBufferInfo(hConsole, &cSBI);
+                SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+                printf("Failed to render\n");
+                SetConsoleTextAttribute(hConsole, cSBI.wAttributes);
+#endif
+            }
+            effect.EndPass();
         }
-        effect.EndPass();
     }
     effect.End();
 }
@@ -144,6 +156,10 @@ void BillboardRenderer::RenderParticles() const
 {
     RenderEngine&     engine  = GetEngine();
     IDirect3DDevice9* pDevice = engine.GetDevice();
+
+    //if (m_plugin.m_textureName == "W_NemSmoke.dds") {
+    //    return;
+    //}
 
     engine.SetWorldMatrix(Matrix::Identity, m_effect);
     if (engine.IsUaW()) {

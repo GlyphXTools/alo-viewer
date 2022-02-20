@@ -168,7 +168,7 @@ public:
         }
         return nPasses;
     };
-    bool BeginPass(UINT pass) { m_pEffect->BeginPass(pass); return ~m_selected->m_passes[pass].m_flags & PASS_CLEANUP; }
+    bool BeginPass(UINT pass) { return (m_pEffect->BeginPass(pass) == D3D_OK) && ~m_selected->m_passes[pass].m_flags & PASS_CLEANUP; }
     void EndPass()            { m_pEffect->EndPass(); }
     void End()                { m_pEffect->End(); }
 
