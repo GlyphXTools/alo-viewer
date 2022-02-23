@@ -27,7 +27,7 @@ static bool AnimationFilter(const string& name, ptr<IFile> f, void* param)
     return false;
 }
 
-ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, ptr<Model> model, wstring* filename)
+ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Model> model, wstring* filename)
 {
 	ptr<Animation> anim = NULL;
 
@@ -40,19 +40,25 @@ ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, ptr<Model> mode
 	    TCHAR filebuf[MAX_PATH];
 	    filebuf[0] = '\0';
 
-        wstring filter = LoadString(IDS_FILES_ALAMO) + wstring(L" (*.ala, *.meg)\0*.ALA; *.MEG\0", 29)
+		wstring initialDir = mod.GetBaseDir() + L"\\Data";
+		if (!mod.IsBaseGame()) {
+			initialDir += L"\\Art\\Models";
+		}
+
+		wstring filter = LoadString(IDS_FILES_ALAMO) + wstring(L" (*.ala, *.meg)\0*.ALA; *.MEG\0", 29)
                        + LoadString(IDS_FILES_ALL)   + wstring(L" (*.*)\0*.*\0", 11);
 
 	    OPENFILENAME ofn;
 	    memset(&ofn, 0, sizeof(OPENFILENAME));
-	    ofn.lStructSize  = sizeof(OPENFILENAME);
-	    ofn.hwndOwner    = hWndParent;
-	    ofn.hInstance    = hInstance;
-	    ofn.lpstrFilter  = filter.c_str();
-	    ofn.nFilterIndex = 0;
-	    ofn.lpstrFile    = filebuf;
-	    ofn.nMaxFile     = MAX_PATH;
-	    ofn.Flags        = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+	    ofn.lStructSize     = sizeof(OPENFILENAME);
+	    ofn.hwndOwner       = hWndParent;
+	    ofn.hInstance       = hInstance;
+	    ofn.lpstrFilter     = filter.c_str();
+	    ofn.nFilterIndex    = 0;
+	    ofn.lpstrFile       = filebuf;
+	    ofn.nMaxFile        = MAX_PATH;
+		ofn.lpstrInitialDir = initialDir.c_str();
+		ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 		if (GetOpenFileName( &ofn ) != 0)
 		{
             *filename = filebuf;

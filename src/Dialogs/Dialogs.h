@@ -1,6 +1,7 @@
 #ifndef DIALOGS_H
 #define DIALOGS_H
 
+#include "Games.h"
 #include "General/GameTypes.h"
 #include "RenderEngine/RenderEngine.h"
 #include "Assets/Files.h"
@@ -15,8 +16,8 @@ namespace Dialogs
     // Modal dialogs
     void ShowCameraDialog (HWND hWndParent, Alamo::Camera& camera);
     void ShowAboutDialog  (HWND hWndParent);
-    ptr<Alamo::Model>     ShowOpenModelDialog(HWND hWndParent, std::wstring* filename, ptr<Alamo::MegaFile>& meg);
-    ptr<Alamo::Animation> ShowOpenAnimationDialog(HWND hWndParent, ptr<Alamo::Model> model, std::wstring* filename);
+    ptr<Alamo::Model>     ShowOpenModelDialog(HWND hWndParent, GameMod mod, std::wstring* filename, ptr<Alamo::MegaFile>& meg);
+    ptr<Alamo::Animation> ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Alamo::Model> model, std::wstring* filename);
     int                   ShowSelectSubFileDialog(HWND hWndParent, ptr<Alamo::MegaFile> meg, SSF_CALLBACK callback, void* userdata);
 
     // Modeless dialogs

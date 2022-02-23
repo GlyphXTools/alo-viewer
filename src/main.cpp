@@ -678,7 +678,7 @@ static void DoMenuItem(ApplicationInfo* info, UINT id)
 		{
             wstring filename;
             ptr<MegaFile> meg;
-            ptr<Model> model = Dialogs::ShowOpenModelDialog(info->hMainWnd, &filename, meg);
+            ptr<Model> model = Dialogs::ShowOpenModelDialog(info->hMainWnd, info->activeGameMod->first, &filename, meg);
 			if (model != NULL)
 			{
 				OnModelLoaded(info, model, meg, filename);
@@ -694,7 +694,7 @@ static void DoMenuItem(ApplicationInfo* info, UINT id)
 			if (info->engine != NULL)
 			{
                 wstring filename;
-                ptr<Animation> anim = Dialogs::ShowOpenAnimationDialog(info->hMainWnd, info->model, &filename);
+                ptr<Animation> anim = Dialogs::ShowOpenAnimationDialog(info->hMainWnd, info->activeGameMod->first, info->model, &filename);
 				if (anim != NULL)
 				{
                     info->OnAnimationSelected(anim, filename, false);
