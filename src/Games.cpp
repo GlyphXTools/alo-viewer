@@ -81,33 +81,14 @@ static int GetSteamIdForGame(GameID game)
     return 0;
 }
 
-static wstring GetSteamLibraryPath() {
-    wstring result;
-
-    HKEY hKey = 0;
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Valve\\Steam", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &hKey) != ERROR_SUCCESS) {
-        RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Valve\\Steam", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &hKey);
+static wstring GetSteamWorkshopPath(wstring baseDir)
+{
+    size_t steamappsPos = baseDir.rfind(L"steamapps");
+    if (steamappsPos != wstring::npos) {
+        return baseDir.substr(0, steamappsPos + 9) + L"\\workshop\\content\\";
     }
-
-    if (hKey != 0)
-    {
-        DWORD type, size = MAX_PATH;
-        TCHAR path[MAX_PATH];
-        if (RegQueryValueEx(hKey, L"InstallPath", NULL, &type, (LPBYTE)path, &size) == ERROR_SUCCESS)
-        {
-            if (PathIsDirectory(path))
-            {
-                result = path;
-            }
-        }
-        RegCloseKey(hKey);
-    }
-
-    return result;
-}
-
-static wstring GetSteamWorkshopPath() {
-    return GetSteamLibraryPath() + L"\\steamapps\\workshop\\content\\";
+    // Not a Steam installation
+    return L"";
 }
 
 // Returns the GameMod identifier for a file
@@ -140,7 +121,7 @@ wstring GameMod::GetBaseDir() const
     }
     else if (!m_mod.empty() && !m_steamId.empty()) {
         // It's a Steam mod, return appropriate Steam Workshop directory
-        wstring modpath = GetSteamWorkshopPath() + to_wstring(GetSteamIdForGame(m_game)) + L"\\" + m_steamId;
+        wstring modpath = GetSteamWorkshopPath(path) + to_wstring(GetSteamIdForGame(m_game)) + L"\\" + m_steamId;
         if (PathIsDirectory(modpath.c_str())) {
             return modpath;
         }
@@ -222,9 +203,9 @@ static void GetMods(GameID game, std::vector<GameMod>& gamemods)
 
     int steamId;
     if ((steamId = GetSteamIdForGame(game)) != 0) {
-        if (!GetSteamLibraryPath().empty()) {
-            wstring gameWorkshopPath = GetSteamWorkshopPath() + to_wstring(steamId);
-
+        wstring gameWorkshopPath = GetSteamWorkshopPath(gamepath);
+        if (!gameWorkshopPath.empty()) {
+            gameWorkshopPath += to_wstring(steamId);
             WIN32_FIND_DATA wfd;
             HANDLE hFind = FindFirstFile((gameWorkshopPath + L"\\*.*").c_str(), &wfd);
             if (hFind != INVALID_HANDLE_VALUE)
