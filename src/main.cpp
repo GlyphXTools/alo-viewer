@@ -353,6 +353,7 @@ static void OnModelLoaded(ApplicationInfo* info, ptr<Model> model, ptr<MegaFile>
     info->m_sfxmap = NULL;
     SAFE_RELEASE(info->model);
     SAFE_RELEASE(info->animation);
+    ResetGameTime();
 
     info->model = model;
     if (model != NULL)

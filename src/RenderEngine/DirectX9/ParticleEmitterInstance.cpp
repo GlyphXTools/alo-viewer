@@ -127,7 +127,12 @@ void ParticleEmitterInstance::Update()
             SpawnParticle(m_nextSpawnTime, m_parent);
         }
         float t = m_emitter.GetCreator().GetSpawnDelay(m_creatorData, m_nextSpawnTime - m_spawnTime);
+        float lastSpawnTime = m_nextSpawnTime;
         m_nextSpawnTime = (t != -1) ? m_nextSpawnTime + t : -1;
+        if (m_nextSpawnTime == lastSpawnTime)
+        {
+            break;
+        }
     }
     CheckDestruction();
 }
@@ -292,7 +297,12 @@ ParticleEmitterInstance::ParticleEmitterInstance(LinkedList<ParticleEmitterInsta
                 SpawnParticle(m_nextSpawnTime, m_parent);
             }
             float t = m_emitter.GetCreator().GetSpawnDelay(m_creatorData, m_nextSpawnTime - m_spawnTime);
+            float lastSpawnTime = m_nextSpawnTime;
             m_nextSpawnTime = (t != -1) ? m_nextSpawnTime + t : -1;
+            if (m_nextSpawnTime == lastSpawnTime)
+            {
+                break;
+            }
         }
     }
     catch (...)
