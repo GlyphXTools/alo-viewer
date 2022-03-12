@@ -188,6 +188,8 @@ public:
 
 	void Render(const RenderOptions& options);
 
+    void ClearTextureCache();
+
     ptr<Effect>          LoadEffect(const std::string& name, FxType type = FX_NORMAL);
     ptr<Effect>          LoadShadowMapEffect(const std::string& vertexType);
     ptr<Effect>          LoadShadowDebugEffect(bool rskin);

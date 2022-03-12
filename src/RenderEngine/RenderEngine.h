@@ -76,6 +76,8 @@ public:
 
 	virtual void Render(const RenderOptions& options) = 0;
 
+    virtual void ClearTextureCache() = 0;
+
     // Factory methods
     virtual ptr<IObjectTemplate> CreateObjectTemplate(ptr<Model> model) = 0;
     virtual ptr<IRenderObject>   CreateRenderObject(ptr<IObjectTemplate> templ, int alt, int lod) = 0;

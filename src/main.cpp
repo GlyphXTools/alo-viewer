@@ -354,6 +354,7 @@ static void OnModelLoaded(ApplicationInfo* info, ptr<Model> model, ptr<MegaFile>
     info->m_sfxmap = NULL;
     SAFE_RELEASE(info->model);
     SAFE_RELEASE(info->animation);
+    info->engine->ClearTextureCache();
     ResetGameTime();
 
     info->model = model;

@@ -1150,6 +1150,11 @@ ptr<IRenderObject> RenderEngine::CreateRenderObject(ptr<IObjectTemplate> templ, 
     return new RenderObject(m_objects, t, alt, lod);
 }
 
+void RenderEngine::ClearTextureCache()
+{
+    m_textureCache.clear();
+}
+
 RenderEngine::RenderEngine(HWND hWnd, const RenderSettings& settings, const Environment& env, bool isUaW)
     : m_hWnd(hWnd), m_settings(settings), m_isUaW(isUaW), m_effects(NULL)
 {
@@ -1247,7 +1252,7 @@ RenderEngine::RenderEngine(HWND hWnd, const RenderSettings& settings, const Envi
 RenderEngine::~RenderEngine()
 {
     // Clear the caches
-    m_textureCache.clear();
+    ClearTextureCache();
     m_effectCache.clear();
     m_shadowEffectCache.clear();
   
