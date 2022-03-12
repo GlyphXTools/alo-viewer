@@ -1,3 +1,4 @@
+#include "config.h"
 #include "UI.h"
 #include <commdlg.h>
 using namespace Alamo;
@@ -78,13 +79,13 @@ static LRESULT CALLBACK ColorButtonWindowProc(HWND hWnd, UINT uMsg, WPARAM wPara
 		case WM_LBUTTONUP:
 		{
 			ReleaseCapture();
-			static COLORREF CustomColors[16] = {0};
+			static std::vector<COLORREF> CustomColors = Config::GetCustomColors();
 
 			// Show the color chooser
 			CHOOSECOLOR cc;
 			ZeroMemory(&cc, sizeof(CHOOSECOLOR));
 			cc.lStructSize  = sizeof(CHOOSECOLOR);
-			cc.lpCustColors = CustomColors;
+			cc.lpCustColors = CustomColors.data();
 			cc.hwndOwner    = hWnd;
 			cc.rgbResult    = control->color;
 			cc.lpfnHook     = CustomHookProc;
@@ -101,6 +102,8 @@ static LRESULT CALLBACK ColorButtonWindowProc(HWND hWnd, UINT uMsg, WPARAM wPara
 				cc.rgbResult = original;
 			}
 			control->color = cc.rgbResult;
+			Config::SetCustomColors(CustomColors);
+
 			RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 			SendMessage(GetParent(hWnd), WM_COMMAND, (WPARAM)MAKELONG(GetDlgCtrlID(hWnd), CBN_CHANGE), (LPARAM)hWnd );
 			break;

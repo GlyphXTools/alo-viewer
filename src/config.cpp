@@ -1,4 +1,5 @@
 #include "config.h"
+#include "General/Utils.h"
 #include <shlwapi.h>
 using namespace Alamo;
 using namespace std;
@@ -290,6 +291,36 @@ void Config::SetDefaultGameMod(const GameMod& gm)
         WriteInteger(hKey, L"GameMod_Game", gm.m_game);
         WriteString(hKey, L"GameMod_Mod", gm.m_mod);
         WriteString(hKey, L"GameMod_SteamId", gm.m_steamId);
+        RegCloseKey(hKey);
+    }
+}
+
+vector<COLORREF> Config::GetCustomColors()
+{
+    HKEY hKey;
+    vector<COLORREF> colors(NUM_CUSTOM_COLORS, 0);
+    const wstring path = wstring(REGISTRY_BASE_PATH) + L"\\Settings\\CustomColors";
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, path.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+	{
+        for (size_t i = 0; i < NUM_CUSTOM_COLORS; ++i)
+        {
+            colors[i] = ReadInteger(hKey, FormatString(L"Color_%d", i).c_str(), 0);
+        }
+        RegCloseKey(hKey);
+    }
+    return colors;
+}
+
+void Config::SetCustomColors(const vector<COLORREF>& colors)
+{
+	HKEY hKey;
+    const wstring path = wstring(REGISTRY_BASE_PATH) + L"\\Settings\\CustomColors";
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, path.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS)
+    {
+        for (size_t i = 0; i < colors.size(); ++i) 
+        {
+            WriteInteger(hKey, FormatString(L"Color_%d", i).c_str(), colors[i]);
+        }
         RegCloseKey(hKey);
     }
 }

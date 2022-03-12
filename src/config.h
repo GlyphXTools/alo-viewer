@@ -71,5 +71,10 @@ void AddToHistory(const std::wstring& name);
 // Get and set the default game mod
 GameMod GetDefaultGameMod();
 void SetDefaultGameMod(const GameMod& mode);
+
+// Get and set the saved custom colors for the color picker
+static const int NUM_CUSTOM_COLORS = 16;
+std::vector<COLORREF> GetCustomColors();
+void SetCustomColors(const std::vector<COLORREF>& colors);
 }
 #endif
