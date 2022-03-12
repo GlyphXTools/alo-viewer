@@ -77,6 +77,8 @@
 #define IDS_STRING179                   179
 #define IDS_DETAILS_PARAM_TEXTURE       179
 #define IDS_NLOHMANNJSON_COPYRIGHT      180
+#define IDS_ANIMATIONS_MODEL            181
+#define IDS_ANIMATIONS_EXTRA            182
 #define IDC_EDIT1                       1002
 #define IDC_SAVE                        1003
 #define IDC_LOAD                        1004

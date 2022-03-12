@@ -307,7 +307,7 @@ END
 // Menu
 //
 
-IDR_MAINMENU MENU 
+IDR_MAINMENU MENU
 BEGIN
     POPUP "&Datei"
     BEGIN
@@ -369,7 +369,7 @@ BEGIN
     END
 END
 
-IDR_SHADERLOD_MENU_EAW MENU 
+IDR_SHADERLOD_MENU_EAW MENU
 BEGIN
     POPUP "Popup"
     BEGIN
@@ -380,7 +380,7 @@ BEGIN
     END
 END
 
-IDR_SHADERLOD_MENU_UAW_EA MENU 
+IDR_SHADERLOD_MENU_UAW_EA MENU
 BEGIN
     POPUP "Popup"
     BEGIN
@@ -397,7 +397,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_CAMERA, DIALOG
     BEGIN
@@ -476,7 +476,7 @@ END
 // Accelerator
 //
 
-IDR_ACCELERATOR1 ACCELERATORS 
+IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
     "O",            ID_FILE_OPENMODEL,      VIRTKEY, CONTROL, NOINVERT
     "O",            ID_FILE_OPENANIMATION,  VIRTKEY, SHIFT, CONTROL, NOINVERT
@@ -494,7 +494,7 @@ END
 // String Table
 //
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_EXPAT_COPYRIGHT     "Copyright (c) 1998, 1999, 2000 Thai Open Source Software Center Ltd and Clark Cooper. Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006 Expat maintainers.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."
     IDS_DISCLAIMER          "THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
@@ -516,7 +516,7 @@ BEGIN
     IDS_CAMERA_NAME         "Name"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_CAMERA_POSITION     "Position"
     IDS_CAMERA_TARGET       "Ziel"
@@ -536,7 +536,7 @@ BEGIN
     IDS_DETAILS_VERT_POSITION "Position"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_DETAILS_VERT_NORMAL "Normal"
     IDS_DETAILS_VERT_TEXCOORDS "Tex. Koordinaten #%d"
@@ -556,13 +556,15 @@ BEGIN
     IDS_NO                  "Nein"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_DETAILS_LIGHT_OMNI  "Omni light"
     IDS_DETAILS_LIGHT_DIRECTIONAL "Directional light"
     IDS_DETAILS_LIGHT_SPOT  "Spotlight"
     IDS_DETAILS_PARAM_TEXTURE "Textur"
     IDS_NLOHMANNJSON_COPYRIGHT "Copyright (c) 2013-2019 Niels Lohmann <http://nlohmann.me>.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."
+    IDS_ANIMATIONS_MODEL    "Modell Animationen"
+    IDS_ANIMATIONS_EXTRA    "Extra Animationen"
 END
 
 #endif    // German (Germany) resources

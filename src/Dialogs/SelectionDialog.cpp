@@ -10,14 +10,6 @@ using namespace std;
 namespace Dialogs
 {
 
-struct ANIMATION_INFO
-{
-    wstring        name;
-    wstring        filename;
-    ptr<IFile>     file;
-    ptr<Animation> animation;
-};
-
 struct SELECTION_INFO
 {
     ISelectionCallback*     callback;
@@ -136,6 +128,26 @@ static void ChangeSelection(SELECTION_INFO* info, HWND hWnd, WORD button)
     }
 }
 
+void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai)
+{
+    SELECTION_INFO* psi = (SELECTION_INFO*)(LONG_PTR)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+    static HWND hAnimList = NULL;
+    if (hAnimList == NULL)
+    {
+        hAnimList = GetDlgItem(hWnd, IDC_LIST1);
+    }
+    psi->animations.push_back(*pai);
+
+    LV_ITEM item;
+    item.mask     = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
+    item.pszText  = (LPWSTR)pai->name.c_str();
+    item.lParam   = (int)psi->animations.size() - 1;
+    item.iItem    = (int)item.lParam;
+    item.iSubItem = 0;
+    item.iGroupId = 2;
+    ListView_InsertItem(hAnimList, &item);
+}
+
 static void PlayAnimation(SELECTION_INFO* info, int index, bool loop)
 {
     if (index >= 0)
@@ -225,6 +237,21 @@ static INT_PTR CALLBACK SelectionDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam,
             ListView_SetExtendedListViewStyle(hProxyList,  LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
             ListView_SetExtendedListViewStyle(hDazzleList, LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
 
+            ListView_EnableGroupView(hAnimList, TRUE);
+
+            wstring modelAnimationsText = LoadString(IDS_ANIMATIONS_MODEL);
+            wstring extraAnimationsText = LoadString(IDS_ANIMATIONS_EXTRA);
+            LVGROUP group;
+            group.cbSize    = sizeof(LVGROUP);
+            group.mask      = LVGF_HEADER | LVGF_GROUPID;
+            group.pszHeader = (LPWSTR)modelAnimationsText.c_str();
+            group.iGroupId  = 1;
+            ListView_InsertGroup(hAnimList, -1, &group);
+
+            group.pszHeader = (LPWSTR)extraAnimationsText.c_str();
+            group.iGroupId  = 2;
+            ListView_InsertGroup(hAnimList, -1, &group);
+            
             SetWindowLong(hBoneTree, GWL_STYLE, GetWindowLong(hBoneTree, GWL_STYLE) | TVS_CHECKBOXES);
 
             SendMessage(hLODSpin, UDM_SETRANGE32, 0, 0);
@@ -732,11 +759,12 @@ void Selection_SetObject(HWND hWnd, IRenderObject* object, ptr<MegaFile> megaFil
         for (size_t i = 0; i < info->animations.size(); i++)
         {
             LV_ITEM item;
-            item.mask     = LVIF_TEXT | LVIF_PARAM;
+            item.mask     = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
             item.pszText  = (LPWSTR)info->animations[i].name.c_str();
             item.lParam   = i;
             item.iItem    = (int)i;
             item.iSubItem = 0;
+            item.iGroupId = 1;
             ListView_InsertItem(hAnimList, &item);
         }
 

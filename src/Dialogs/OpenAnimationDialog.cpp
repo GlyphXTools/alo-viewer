@@ -6,6 +6,7 @@
 #include <sstream>
 using namespace Alamo;
 using namespace std;
+using namespace Dialogs;
 
 static bool AnimationFilter(const string& name, ptr<IFile> f, void* param)
 {
@@ -27,10 +28,9 @@ static bool AnimationFilter(const string& name, ptr<IFile> f, void* param)
     return false;
 }
 
-ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Model> model, wstring* filename)
+ptr<ANIMATION_INFO> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Model> model)
 {
-	ptr<Animation> anim = NULL;
-
+	ptr<ANIMATION_INFO> pai = new ANIMATION_INFO;
 #ifdef NDEBUG
     // In debug mode, we want to trap the exception in the debugger
 	try
@@ -61,25 +61,25 @@ ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, pt
 		ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 		if (GetOpenFileName( &ofn ) != 0)
 		{
-            *filename = filebuf;
+			pai->filename = filebuf;
 			wstring ext = Uppercase(&filebuf[ofn.nFileExtension]);
-			ptr<IFile> file = new PhysicalFile(filebuf);
+			pai->file = new PhysicalFile(filebuf);
 			if (ext == L"MEG")
 			{
 				// Load it through a MegaFile
-				ptr<MegaFile> meg = new MegaFile( file );
+				ptr<MegaFile> meg = new MegaFile(pai->file);
                 int index = Dialogs::ShowSelectSubFileDialog(hWndParent, meg, AnimationFilter, (Model*)model);
                 if (index >= 0)
                 {
-                    file       = meg->GetFile(index);
-                    *filename += L"|" + AnsiToWide(meg->GetFilename(index));
+					pai->file      = meg->GetFile(index);
+					pai->filename += L"|" + AnsiToWide(meg->GetFilename(index));
                 }
 			}
 			
-            if (file != NULL)
+            if (pai->file != NULL)
 			{
 				// Load the model file
-				anim = new Animation(file, *model);
+				pai->animation = new Animation(pai->file, *model);
 			}
 		}
 	}
@@ -88,8 +88,18 @@ ptr<Animation> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, pt
 	{
         wstring error = LoadString(IDS_ERR_UNABLE_TO_OPEN_ANIMATION);
 		MessageBox(NULL, error.c_str(), NULL, MB_OK | MB_ICONHAND );
-		anim = NULL;
+		pai->animation = NULL;
 	}
 #endif
-	return anim;
+	
+	wchar_t fName[_MAX_FNAME];
+	if (_wsplitpath_s(pai->filename.c_str(), NULL, 0, NULL, 0, fName, _MAX_FNAME, NULL, 0) == 0)
+	{
+		pai->name = fName;
+	}
+	else
+	{
+		pai->name = L"Failed to get animation name";
+	}
+	return pai;
 }

@@ -11,13 +11,33 @@
 
 namespace Dialogs
 {
+    struct ANIMATION_INFO : IObject
+    {
+        std::wstring          name;
+        std::wstring          filename;
+        ptr<Alamo::IFile>     file;
+        ptr<Alamo::Animation> animation;
+
+        void SetAnimation(ptr<Alamo::Animation> anim, ptr<Alamo::IFile> f)
+        {
+            this->animation = anim;
+            this->file = f;
+            this->filename = this->file->name();
+            wchar_t fName[_MAX_FNAME];
+            if (_wsplitpath_s(this->filename.c_str(), NULL, 0, NULL, 0, fName, _MAX_FNAME, NULL, 0) == 0)
+            {
+                this->name = fName;
+            }
+        }
+    };
+
     typedef bool (*SSF_CALLBACK)(const std::string& name, ptr<Alamo::IFile> f, void* param);
 
     // Modal dialogs
     void ShowCameraDialog (HWND hWndParent, Alamo::Camera& camera);
     void ShowAboutDialog  (HWND hWndParent);
     ptr<Alamo::Model>     ShowOpenModelDialog(HWND hWndParent, GameMod mod, std::wstring* filename, ptr<Alamo::MegaFile>& meg);
-    ptr<Alamo::Animation> ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Alamo::Model> model, std::wstring* filename);
+    ptr<ANIMATION_INFO>   ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Alamo::Model> model);
     int                   ShowSelectSubFileDialog(HWND hWndParent, ptr<Alamo::MegaFile> meg, SSF_CALLBACK callback, void* userdata);
 
     // Modeless dialogs
@@ -39,5 +59,6 @@ namespace Dialogs
     void Selection_ResetObject(HWND hWnd, Alamo::IRenderObject* object);
     int Selection_GetALT(HWND hWnd);
     int Selection_GetLOD(HWND hWnd);
+    void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai);
 }
 #endif

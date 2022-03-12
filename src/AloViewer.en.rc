@@ -7,8 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
-
+#include "afxres.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -561,6 +560,8 @@ BEGIN
     IDS_DETAILS_LIGHT_SPOT  "Spotlight"
     IDS_DETAILS_PARAM_TEXTURE "Texture"
     IDS_NLOHMANNJSON_COPYRIGHT "Copyright (c) 2013-2019 Niels Lohmann <http://nlohmann.me>.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."
+    IDS_ANIMATIONS_MODEL    "Model Animations"
+    IDS_ANIMATIONS_EXTRA    "Extra Animations"
 END
 
 #endif    // English (U.S.) resources

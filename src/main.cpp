@@ -20,6 +20,7 @@
 #include <commctrl.h>
 using namespace std;
 using namespace Alamo;
+using namespace Dialogs;
 
 // Indices of items in the menu. Until the compiler properly supports C99,
 // don't use designators
@@ -534,8 +535,10 @@ static void LoadFile(ApplicationInfo* info, wstring filename)
                 }
                 else if (info->model != NULL)
                 {
-                    ptr<Animation> anim = new Animation(file, *info->model);
-		            info->OnAnimationSelected(anim, filename, false);
+                    ptr<ANIMATION_INFO> pai = new ANIMATION_INFO;
+                    pai->SetAnimation(new Animation(file, *info->model), file);
+		            info->OnAnimationSelected(pai->animation, filename, false);
+                    Dialogs::AddToAnimationList(info->hSelection, pai);
                 }
 
                 // Add it to the history
@@ -694,15 +697,16 @@ static void DoMenuItem(ApplicationInfo* info, UINT id)
 		case ID_FILE_OPENANIMATION:
 			if (info->engine != NULL)
 			{
-                wstring filename;
-                ptr<Animation> anim = Dialogs::ShowOpenAnimationDialog(info->hMainWnd, info->activeGameMod->first, info->model, &filename);
-				if (anim != NULL)
+                ptr<ANIMATION_INFO> pai = Dialogs::ShowOpenAnimationDialog(info->hMainWnd, info->activeGameMod->first, info->model);
+				if (pai->animation != NULL)
 				{
-                    info->OnAnimationSelected(anim, filename, false);
+                    info->OnAnimationSelected(pai->animation, pai->filename, false);
 
                     // Add it to the history
-                    Config::AddToHistory(filename);
+                    Config::AddToHistory(pai->filename);
                     AppendHistory(info->hMainWnd, info);
+
+                    Dialogs::AddToAnimationList(info->hSelection, pai);
 				}
 			}
 			break;
