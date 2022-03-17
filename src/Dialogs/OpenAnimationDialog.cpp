@@ -47,6 +47,7 @@ ptr<ANIMATION_INFO> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mo
 
 		wstring filter = LoadString(IDS_FILES_ALAMO) + wstring(L" (*.ala, *.meg)\0*.ALA; *.MEG\0", 29)
                        + LoadString(IDS_FILES_ALL)   + wstring(L" (*.*)\0*.*\0", 11);
+		wstring title  = LoadString(IDS_FILES_OPENANIMATION);
 
 	    OPENFILENAME ofn;
 	    memset(&ofn, 0, sizeof(OPENFILENAME));
@@ -58,6 +59,7 @@ ptr<ANIMATION_INFO> Dialogs::ShowOpenAnimationDialog(HWND hWndParent, GameMod mo
 	    ofn.lpstrFile       = filebuf;
 	    ofn.nMaxFile        = MAX_PATH;
 		ofn.lpstrInitialDir = initialDir.c_str();
+		ofn.lpstrTitle      = title.c_str();
 		ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 		if (GetOpenFileName( &ofn ) != 0)
 		{

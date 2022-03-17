@@ -243,6 +243,9 @@
     <ClCompile Include="Effects\SurfaceFX.cpp">
       <Filter>Source Files\Effects</Filter>
     </ClCompile>
+    <ClCompile Include="Dialogs\OpenAnimationOverrideDialog.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">

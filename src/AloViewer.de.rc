@@ -312,7 +312,8 @@ BEGIN
     POPUP "&Datei"
     BEGIN
         MENUITEM "&Model öffnen\tStrg+O",       ID_FILE_OPENMODEL
-        MENUITEM "&Animation öffnen\tStrg+Umschalt+O", ID_FILE_OPENANIMATION
+        MENUITEM "&Animation öffnen\tStrg+Umschalt+O", ID_FILE_OPENANIMATION, GRAYED
+        MENUITEM "Animations&überschreibung öffnen\tStrg+Umschalt+A", ID_FILE_OPENANIMATIONOVERRIDE, GRAYED
         MENUITEM "&Details",                    ID_FILE_DETAILS, GRAYED
         MENUITEM SEPARATOR
         MENUITEM "HISTORY_0",                   ID_FILE_HISTORY_0
@@ -480,6 +481,7 @@ IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
     "O",            ID_FILE_OPENMODEL,      VIRTKEY, CONTROL, NOINVERT
     "O",            ID_FILE_OPENANIMATION,  VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "A",            ID_FILE_OPENANIMATIONOVERRIDE, VIRTKEY, SHIFT, CONTROL, NOINVERT
     "A",            ID_EDIT_SELECTALL,      VIRTKEY, CONTROL, NOINVERT
     "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
     "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
@@ -565,7 +567,11 @@ BEGIN
     IDS_NLOHMANNJSON_COPYRIGHT "Copyright (c) 2013-2019 Niels Lohmann <http://nlohmann.me>.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."
     IDS_ANIMATIONS_MODEL    "Modell Animationen"
     IDS_ANIMATIONS_EXTRA    "Extra Animationen"
-END
+    IDS_ANIMATIONS_OVERRIDE "Überschreiben Animationen"
+    IDS_FILES_OPENMODEL     "Model öffnen"
+    IDS_FILES_OPENANIMATION "Animation öffnen"
+    IDS_FILES_OPENANIMATIONOVERRIDE "Animationsüberschreibung öffnen"
+    END
 
 #endif    // German (Germany) resources
 /////////////////////////////////////////////////////////////////////////////

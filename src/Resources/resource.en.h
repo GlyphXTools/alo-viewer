@@ -79,6 +79,10 @@
 #define IDS_NLOHMANNJSON_COPYRIGHT      180
 #define IDS_ANIMATIONS_MODEL            181
 #define IDS_ANIMATIONS_EXTRA            182
+#define IDS_ANIMATIONS_OVERRIDE         183
+#define IDS_FILES_OPENMODEL             184
+#define IDS_FILES_OPENANIMATION         185
+#define IDS_FILES_OPENANIMATIONOVERRIDE 186
 #define IDC_EDIT1                       1002
 #define IDC_SAVE                        1003
 #define IDC_LOAD                        1004
@@ -190,6 +194,7 @@
 #define ID_VIEW_TOGGLELOG               40051
 #define ID_VIEW_SHADERLOD40056          40056
 #define ID_VIEW_DEBUGSHADOWS            40057
+#define ID_FILE_OPENANIMATIONOVERRIDE   40058
 #define ID_FILE_HISTORY_0               50021
 #define ID_EAW_UNMODDED                 60100
 #define ID_EAW_FOC_UNMODDED             60200

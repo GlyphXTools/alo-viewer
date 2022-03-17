@@ -31,6 +31,13 @@ namespace Dialogs
         }
     };
 
+    enum AnimationType
+    {
+        INHERENT_ANIM,   // Animations that start with the name of the model, and get loaded with the model
+        ADDITIONAL_ANIM, // Animations loaded through the Load Animation menu item
+        OVERRIDE_ANIM    // Animations loaded through the Load Animation Override menu item
+    };
+
     typedef bool (*SSF_CALLBACK)(const std::string& name, ptr<Alamo::IFile> f, void* param);
 
     // Modal dialogs
@@ -38,6 +45,7 @@ namespace Dialogs
     void ShowAboutDialog  (HWND hWndParent);
     ptr<Alamo::Model>     ShowOpenModelDialog(HWND hWndParent, GameMod mod, std::wstring* filename, ptr<Alamo::MegaFile>& meg);
     ptr<ANIMATION_INFO>   ShowOpenAnimationDialog(HWND hWndParent, GameMod mod, ptr<Alamo::Model> model);
+    bool                  ShowOpenAnimationOverrideDialog(HWND hWndParent, GameMod mod, std::wstring* filename, ptr<Alamo::MegaFile>& meg);
     int                   ShowSelectSubFileDialog(HWND hWndParent, ptr<Alamo::MegaFile> meg, SSF_CALLBACK callback, void* userdata);
 
     // Modeless dialogs
@@ -59,6 +67,7 @@ namespace Dialogs
     void Selection_ResetObject(HWND hWnd, Alamo::IRenderObject* object);
     int Selection_GetALT(HWND hWnd);
     int Selection_GetLOD(HWND hWnd);
-    void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai);
+    void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai, AnimationType animType);
+    void LoadModelAnimations(HWND hWnd, const Alamo::Model* model, const Alamo::MegaFile* megaFile, std::wstring filename, AnimationType animType);
 }
 #endif

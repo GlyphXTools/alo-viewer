@@ -1,11 +1,12 @@
 #include "Dialogs/Dialogs.h"
 #include "General/Utils.h"
 #include "General/WinUtils.h"
-#include "Games.h"
 #include "resource.h"
 #include <commdlg.h>
+#include <sstream>
 using namespace Alamo;
 using namespace std;
+using namespace Dialogs;
 
 static bool ModelFilter(const string& name, ptr<IFile> f, void* param)
 {
@@ -14,9 +15,8 @@ static bool ModelFilter(const string& name, ptr<IFile> f, void* param)
     return (ofs != string::npos) && (Uppercase(name.substr(ofs + 1)) == "ALO");
 }
 
-ptr<Model> Dialogs::ShowOpenModelDialog(HWND hWndParent, GameMod mod, wstring* filename, ptr<MegaFile>& meg)
+bool Dialogs::ShowOpenAnimationOverrideDialog(HWND hWndParent, GameMod mod, wstring* filename, ptr<MegaFile>& meg)
 {
-	ptr<Model> model = NULL;
 #ifdef NDEBUG
     // In debug mode the IDE should catch this
 	try
@@ -33,7 +33,7 @@ ptr<Model> Dialogs::ShowOpenModelDialog(HWND hWndParent, GameMod mod, wstring* f
 
         wstring filter = LoadString(IDS_FILES_ALAMO) + wstring(L" (*.alo, *.meg)\0*.ALO; *.MEG\0", 29)
                        + LoadString(IDS_FILES_ALL)   + wstring(L" (*.*)\0*.*\0", 11);
-		wstring title  = LoadString(IDS_FILES_OPENMODEL);
+		wstring title  = LoadString(IDS_FILES_OPENANIMATIONOVERRIDE);
 
 	    OPENFILENAME ofn;
 	    memset(&ofn, 0, sizeof(OPENFILENAME));
@@ -59,15 +59,8 @@ ptr<Model> Dialogs::ShowOpenModelDialog(HWND hWndParent, GameMod mod, wstring* f
                 int index = Dialogs::ShowSelectSubFileDialog(hWndParent, meg, ModelFilter, NULL);
                 if (index >= 0)
                 {
-                    file       = meg->GetFile(index);
                     *filename += L"|" + AnsiToWide(meg->GetFilename(index));
                 }
-			}
-			
-            if (file != NULL)
-			{
-				// Load the model file
-				model = new Model(file);
 			}
 		}
 	}
@@ -76,8 +69,8 @@ ptr<Model> Dialogs::ShowOpenModelDialog(HWND hWndParent, GameMod mod, wstring* f
 	{
         wstring error = LoadString(IDS_ERR_UNABLE_TO_OPEN_MODEL);
 		MessageBox(NULL, error.c_str(), NULL, MB_OK | MB_ICONHAND );
-		model = NULL;
+		return false;
 	}
 #endif
-	return model;
+	return true;
 }

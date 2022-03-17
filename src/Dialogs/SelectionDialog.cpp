@@ -128,7 +128,7 @@ static void ChangeSelection(SELECTION_INFO* info, HWND hWnd, WORD button)
     }
 }
 
-void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai)
+void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai, AnimationType animType)
 {
     SELECTION_INFO* psi = (SELECTION_INFO*)(LONG_PTR)GetWindowLongPtr(hWnd, GWLP_USERDATA);
     static HWND hAnimList = NULL;
@@ -144,7 +144,7 @@ void AddToAnimationList(HWND hWnd, ptr<ANIMATION_INFO> pai)
     item.lParam   = (int)psi->animations.size() - 1;
     item.iItem    = (int)item.lParam;
     item.iSubItem = 0;
-    item.iGroupId = 2;
+    item.iGroupId = animType;
     ListView_InsertItem(hAnimList, &item);
 }
 
@@ -239,17 +239,23 @@ static INT_PTR CALLBACK SelectionDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
             ListView_EnableGroupView(hAnimList, TRUE);
 
-            wstring modelAnimationsText = LoadString(IDS_ANIMATIONS_MODEL);
-            wstring extraAnimationsText = LoadString(IDS_ANIMATIONS_EXTRA);
+            wstring modelAnimationsText    = LoadString(IDS_ANIMATIONS_MODEL);
+            wstring extraAnimationsText    = LoadString(IDS_ANIMATIONS_EXTRA);
+            wstring overrideAnimationsText = LoadString(IDS_ANIMATIONS_OVERRIDE);
             LVGROUP group;
             group.cbSize    = sizeof(LVGROUP);
-            group.mask      = LVGF_HEADER | LVGF_GROUPID;
+            group.mask      = LVGF_HEADER | LVGF_GROUPID | LVGF_STATE;
             group.pszHeader = (LPWSTR)modelAnimationsText.c_str();
-            group.iGroupId  = 1;
+            group.iGroupId  = AnimationType::INHERENT_ANIM;
+            group.state     = LVGS_COLLAPSIBLE;
             ListView_InsertGroup(hAnimList, -1, &group);
 
             group.pszHeader = (LPWSTR)extraAnimationsText.c_str();
-            group.iGroupId  = 2;
+            group.iGroupId  = AnimationType::ADDITIONAL_ANIM;
+            ListView_InsertGroup(hAnimList, -1, &group);
+
+            group.pszHeader = (LPWSTR)overrideAnimationsText.c_str();
+            group.iGroupId  = AnimationType::OVERRIDE_ANIM;
             ListView_InsertGroup(hAnimList, -1, &group);
             
             SetWindowLong(hBoneTree, GWL_STYLE, GetWindowLong(hBoneTree, GWL_STYLE) | TVS_CHECKBOXES);
@@ -521,7 +527,7 @@ static INT_PTR CALLBACK SelectionDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     return FALSE;
 }
 
-static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& model, const MegaFile* megaFile, wstring wModelFilename)
+static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& model, const MegaFile* megaFile, wstring wModelFilename, bool isOverride)
 {
     if (megaFile != NULL)
     {
@@ -562,7 +568,15 @@ static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& m
                             // Load file to check only
                             ANIMATION_INFO info;
                             info.filename  = AnsiToWide(filename);
-                            info.name      = AnsiToWide(name.substr(modelFilename.length()));
+                            if (isOverride)
+                            {
+                                // If loading from an override, do not remove the model file name
+                                info.name  = AnsiToWide(name);
+                            }
+                            else
+                            {
+                                info.name  = AnsiToWide(name.substr(modelFilename.length()));
+                            }
                             info.file      = megaFile->GetFile(i);
                             info.animation = NULL;
 
@@ -574,6 +588,7 @@ static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& m
                         }
                         catch (wexception&)
                         {
+                            Log::WriteError("Failed to load animation: %s", name.c_str());
                         }
                     }
                 }
@@ -608,7 +623,15 @@ static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& m
                     // Load file to check only
                     ANIMATION_INFO info;
                     info.filename  = wfd.cFileName;
-                    info.name      = info.filename.substr(wModelFilename.length() + 1);
+                    if (isOverride)
+                    {
+                        // If loading from an override, do not remove the model file name
+                        info.name  = info.filename;
+                    }
+                    else
+                    {
+                        info.name  = info.filename.substr(wModelFilename.length() + 1);
+                    }
                     info.name      = info.name.substr(0, info.name.length() - 4);    // Strip extension
                     info.file      = new PhysicalFile(dir + wfd.cFileName);
                     info.animation = NULL;
@@ -621,11 +644,42 @@ static void LoadAnimationList(vector<ANIMATION_INFO>& animations, const Model& m
                 }
                 catch (wexception&)
                 {
+                    Log::WriteError("Failed to load animation: %s", WideToAnsi(wfd.cFileName).c_str());
                 }
 
             } while (FindNextFile(hFind, &wfd));
             FindClose(hFind);
         }
+    }
+
+    if (animations.size() == 0 && isOverride)
+    {
+        Log::WriteError("No valid animations found for model %s", WideToAnsi(wModelFilename).c_str());
+    }
+}
+
+void LoadModelAnimations(HWND hWnd, const Model* model, const MegaFile* megaFile, wstring filename, AnimationType animType)
+{
+    SELECTION_INFO* psi = (SELECTION_INFO*)(LONG_PTR)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+    static HWND hAnimList = NULL;
+    if (hAnimList == NULL)
+    {
+        hAnimList = GetDlgItem(hWnd, IDC_LIST1);
+    }
+    vector<ANIMATION_INFO> animations;
+    LoadAnimationList(animations, *model, megaFile, filename, animType != AnimationType::INHERENT_ANIM);
+
+    for (size_t i = 0; i < animations.size(); i++)
+    {
+        psi->animations.push_back(animations[i]);
+        LV_ITEM item;
+        item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
+        item.pszText = (LPWSTR)animations[i].name.c_str();
+        item.lParam = psi->animations.size() - 1;
+        item.iItem = (int)psi->animations.size() - 1;
+        item.iSubItem = 0;
+        item.iGroupId = animType;
+        ListView_InsertItem(hAnimList, &item);
     }
 }
 
@@ -755,18 +809,7 @@ void Selection_SetObject(HWND hWnd, IRenderObject* object, ptr<MegaFile> megaFil
         }
 
         // Fill animation list
-        LoadAnimationList(info->animations, *model, megaFile, filename);
-        for (size_t i = 0; i < info->animations.size(); i++)
-        {
-            LV_ITEM item;
-            item.mask     = LVIF_TEXT | LVIF_PARAM | LVIF_GROUPID;
-            item.pszText  = (LPWSTR)info->animations[i].name.c_str();
-            item.lParam   = i;
-            item.iItem    = (int)i;
-            item.iSubItem = 0;
-            item.iGroupId = 1;
-            ListView_InsertItem(hAnimList, &item);
-        }
+        LoadModelAnimations(hWnd, model, megaFile, filename, AnimationType::INHERENT_ANIM);
 
         info->object = object;
 

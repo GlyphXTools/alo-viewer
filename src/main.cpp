@@ -391,6 +391,8 @@ static void OnModelLoaded(ApplicationInfo* info, ptr<Model> model, ptr<MegaFile>
 
     // Set UI state
     EnableMenuItem(GetMenu(info->hMainWnd), ID_FILE_DETAILS, MF_BYCOMMAND | (model != NULL) ? MF_ENABLED : MF_GRAYED );
+    EnableMenuItem(GetMenu(info->hMainWnd), ID_FILE_OPENANIMATION, MF_BYCOMMAND | (model != NULL) ? MF_ENABLED : MF_GRAYED );
+    EnableMenuItem(GetMenu(info->hMainWnd), ID_FILE_OPENANIMATIONOVERRIDE, MF_BYCOMMAND | (model != NULL) ? MF_ENABLED : MF_GRAYED );
 
 	// Reset animation controls
 	SendMessage(info->hTimeSlider, TBM_SETPOS,   TRUE, 0);
@@ -539,7 +541,7 @@ static void LoadFile(ApplicationInfo* info, wstring filename)
                     ptr<ANIMATION_INFO> pai = new ANIMATION_INFO;
                     pai->SetAnimation(new Animation(file, *info->model), file);
 		            info->OnAnimationSelected(pai->animation, filename, false);
-                    Dialogs::AddToAnimationList(info->hSelection, pai);
+                    Dialogs::AddToAnimationList(info->hSelection, pai, AnimationType::ADDITIONAL_ANIM);
                 }
 
                 // Add it to the history
@@ -707,9 +709,21 @@ static void DoMenuItem(ApplicationInfo* info, UINT id)
                     Config::AddToHistory(pai->filename);
                     AppendHistory(info->hMainWnd, info);
 
-                    Dialogs::AddToAnimationList(info->hSelection, pai);
+                    Dialogs::AddToAnimationList(info->hSelection, pai, AnimationType::ADDITIONAL_ANIM);
 				}
 			}
+			break;
+
+		case ID_FILE_OPENANIMATIONOVERRIDE:
+			if (info->engine != NULL)
+			{
+                wstring filename;
+                ptr<MegaFile> meg;
+                if (Dialogs::ShowOpenAnimationOverrideDialog(info->hMainWnd, info->activeGameMod->first, &filename, meg))
+                {
+                    Dialogs::LoadModelAnimations(info->hSelection, info->model, meg, filename, AnimationType::OVERRIDE_ANIM);
+                }
+            }
 			break;
 
 		case ID_FILE_EXIT:

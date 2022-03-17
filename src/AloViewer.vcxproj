@@ -209,6 +209,7 @@
     <ClCompile Include="Dialogs\CameraDialog.cpp" />
     <ClCompile Include="Dialogs\DetailsDialog.cpp" />
     <ClCompile Include="Dialogs\OpenAnimationDialog.cpp" />
+    <ClCompile Include="Dialogs\OpenAnimationOverrideDialog.cpp" />
     <ClCompile Include="Dialogs\OpenModelDialog.cpp" />
     <ClCompile Include="Dialogs\SelectionDialog.cpp" />
     <ClCompile Include="Dialogs\SelectSubFileDialog.cpp" />
