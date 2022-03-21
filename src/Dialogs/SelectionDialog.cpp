@@ -232,10 +232,10 @@ static INT_PTR CALLBACK SelectionDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam,
             ListView_InsertColumn(hMeshList,   0, &column);
             ListView_InsertColumn(hProxyList,  0, &column);
             ListView_InsertColumn(hDazzleList, 0, &column);
-            ListView_SetExtendedListViewStyle(hAnimList,   LVS_EX_FULLROWSELECT);
-            ListView_SetExtendedListViewStyle(hMeshList,   LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
-            ListView_SetExtendedListViewStyle(hProxyList,  LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
-            ListView_SetExtendedListViewStyle(hDazzleList, LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
+            ListView_SetExtendedListViewStyle(hAnimList,   LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS);
+            ListView_SetExtendedListViewStyle(hMeshList,   LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES | LVS_EX_AUTOSIZECOLUMNS);
+            ListView_SetExtendedListViewStyle(hProxyList,  LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES | LVS_EX_AUTOSIZECOLUMNS);
+            ListView_SetExtendedListViewStyle(hDazzleList, LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES | LVS_EX_AUTOSIZECOLUMNS);
 
             ListView_EnableGroupView(hAnimList, TRUE);
 
