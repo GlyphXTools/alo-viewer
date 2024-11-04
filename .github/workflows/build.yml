@@ -18,11 +18,13 @@ jobs:
   build:
     runs-on: windows-latest
     strategy:
-        matrix:
-          build_config: ['Debug','Release']
-  
+      matrix:
+        build_config: ['Debug','Release']
+
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
