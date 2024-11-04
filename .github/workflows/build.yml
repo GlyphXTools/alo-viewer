@@ -33,6 +33,6 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
-    - name: Build ${{matrix.build_config}}
+    - name: Build ${{matrix.build_config}}|x86
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: msbuild /m /p:Configuration=${{matrix.build_config}} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{matrix.build_config}} /p:Platform=x86 ${{env.SOLUTION_FILE_PATH}}
