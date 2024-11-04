@@ -1,6 +1,7 @@
 #include "RenderEngine/DirectX9/ParticleEmitterInstance.h"
 #include "RenderEngine/DirectX9/RenderObject.h"
 #include "General/GameTime.h"
+#include <stdexcept>
 using namespace std;
 
 namespace Alamo {

@@ -194,7 +194,7 @@ void VelocityAlignedRenderer::UpdatePrimitive(size_t index, const Particle& p, v
     
     // Now rotate around +Y to face camera and then rotate to align +Y with the velocity
     transform *=
-        Matrix( Quaternion(Vector3(0,-1,0), atan2(cam.z, cam.x) - PI/2) ) *
+        Matrix( Quaternion(Vector3(0,-1,0), atan2f(cam.z, cam.x) - PI/2) ) *
         Matrix(
             Quaternion(Vector3(1,0,0), p.velocity.tilt()) *
             Quaternion(Vector3(0,0,1), p.velocity.zAngle() - PI/2)
@@ -374,7 +374,7 @@ void KitesRenderer::UpdatePrimitive(size_t index, const Particle& p, void* _data
     
     // Now rotate around +Y to face camera and then rotate to align +Y with the velocity
     transform *=
-        Matrix( Quaternion(Vector3(0,-1,0), atan2(cam.z, cam.x) - PI/2) ) *
+        Matrix( Quaternion(Vector3(0,-1,0), atan2f(cam.z, cam.x) - PI/2) ) *
         Matrix(
             Quaternion(Vector3(1,0,0), p.velocity.tilt()) *
             Quaternion(Vector3(0,0,1), p.velocity.zAngle() - PI/2)

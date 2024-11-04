@@ -263,7 +263,7 @@ void RenderEngine::SetViewMatrix(const Matrix& view, Effect* pEffect)
     m_matrices.m_viewInv        = view.inverse();
     m_matrices.m_viewProj       = view * m_matrices.m_proj;
     m_matrices.m_billboardView  = BillboardCorrection * m_matrices.m_viewInv.getRotationScale();
-    m_matrices.m_billboardZView = Matrix(Quaternion(Vector3(0,0,1), atan2(-m_matrices.m_viewInv.getTranslation().y, -m_matrices.m_viewInv.getTranslation().x) - D3DXToRadian(90)));
+    m_matrices.m_billboardZView = Matrix(Quaternion(Vector3(0,0,1), atan2f(-m_matrices.m_viewInv.getTranslation().y, -m_matrices.m_viewInv.getTranslation().x) - D3DXToRadian(90)));
 
     Matrix  worldView     = m_matrices.m_world * view;
     Matrix  worldViewProj = m_matrices.m_world * m_matrices.m_viewProj;

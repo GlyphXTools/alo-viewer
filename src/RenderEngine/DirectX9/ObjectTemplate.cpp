@@ -233,7 +233,7 @@ void ObjectTemplate::RenderDazzles(const RenderObject& object) const
                 Matrix transform = billboard;
                 transform.setTranslation( Vector4(dazzle.position, 1) * object.GetBoneTransform(dazzle.bone->index) );
 
-                Color c = dazzle.color * sin(PI * t);
+                Color c = dazzle.color * sinf(PI * t);
                 if (dazzle.colorize)// && colorization.r != -1)
                 {
                     // Replace the dazzle's hue with the colorization's hue

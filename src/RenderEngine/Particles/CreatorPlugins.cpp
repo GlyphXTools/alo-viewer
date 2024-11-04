@@ -59,8 +59,8 @@ Vector3 PropertyGroup::SampleTorus(float torusRadius, float tubeRadius, bool hol
     Vector2 circle(GetRandom(0.0f, 2*PI));
     circle.x = circle.x * radius + torusRadius;
     return Vector3(
-        cos(zAngle) * circle.x,
-        sin(zAngle) * circle.x,
+        cosf(zAngle) * circle.x,
+        sinf(zAngle) * circle.x,
         circle.y * radius);
 }
 

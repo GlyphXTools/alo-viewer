@@ -147,7 +147,7 @@ LightFieldInstance::LightFieldInstance(const LightFieldSource& source, RenderObj
 
     // Determine XY rotation of attached bone as initial rotation
     const Vector3 dir = Vector4(1,0,0,0) * m_object.GetModel().GetBone(m_bone).absTransform;
-    m_rotation = atan2(dir.y, dir.x);
+    m_rotation = atan2f(dir.y, dir.x);
 }
 
 LightFieldInstance::~LightFieldInstance()

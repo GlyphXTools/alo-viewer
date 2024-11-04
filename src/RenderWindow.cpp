@@ -181,7 +181,7 @@ static LRESULT CALLBACK RenderWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 					    // The amount we scroll in and out depends on the distance.
 					    Vector3 diff = camera.m_position - camera.m_target;
 					    float olddist = diff.length();
-					    float newdist = max(7.0f, olddist - sqrt(olddist) * -y);
+					    float newdist = (float)max(7.0f, olddist - sqrt(olddist) * -y);
 					    camera.m_position = diff * (newdist / olddist) + camera.m_target;
 				    }
 
@@ -198,7 +198,7 @@ static LRESULT CALLBACK RenderWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 				// The amount we scroll in and out depends on the distance.
                 Vector3 diff = camera.m_position - camera.m_target;
 				float olddist = diff.length();
-				float newdist = max(10.0f, olddist - sqrt(olddist) * (SHORT)HIWORD(wParam) / WHEEL_DELTA);
+				float newdist = (float)max(10.0f, olddist - sqrt(olddist) * (SHORT)HIWORD(wParam) / WHEEL_DELTA);
 				camera.m_position = diff * (newdist / olddist) + camera.m_target;
 				info->engine->SetCamera(camera);
 			}

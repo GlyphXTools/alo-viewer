@@ -316,7 +316,7 @@ void WindAccelerationModifierPlugin::ModifyParticle(Particle* p, void* _data, fl
 {
     PrivateData* data = (PrivateData*)_data;
     float heading = data->wind->heading - D3DXToRadian(90);
-    p->acceleration += Vector3(cos(heading), sin(heading), 0.0f) * (data->wind->speed * m_windResponse);
+    p->acceleration += Vector3(cosf(heading), sinf(heading), 0.0f) * (data->wind->speed * m_windResponse);
 }
 
 void WindAccelerationModifierPlugin::InitializeParticle(Particle* p, void* _data, float time) const

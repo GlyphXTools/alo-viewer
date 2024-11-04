@@ -296,7 +296,7 @@ void RenderEngine::Render(const RenderOptions& options)
 
     // Update all effects with time-based values
     float windHeading = m_environment.m_wind.heading - ToRadians(90);
-    const Vector4 windBendVector(cos(windHeading) * sin(time), sin(windHeading) * sin(time), 0, 0.002f);
+    const Vector4 windBendVector(cosf(windHeading) * sinf(time), sinf(windHeading) * sinf(time), 0, 0.002f);
     for (BaseEffect* p = m_effects; p != NULL; p = p->Next())
     {
         const EffectHandles& handles = p->GetHandles();
