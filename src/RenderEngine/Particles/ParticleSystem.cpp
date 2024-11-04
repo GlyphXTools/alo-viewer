@@ -298,7 +298,7 @@ struct ParticleSystem::Emitter::OldEmitter
 			    case 0x12: randomScalePerc			= reader.readFloat(); break;
 			    case 0x13: randomLifetimePerc		= reader.readFloat(); break;
 			    case 0x14: reader.readInteger(); break; // Read but ignore index
-			    case 0x17: randomRotationVariance	= fabs(reader.readFloat()); break;
+			    case 0x17: randomRotationVariance	= fabsf(reader.readFloat()); break;
 			    case 0x23: randomRotationDirection	= reader.readByte() != 0; break;
 			    case 0x24: initialDelay				= reader.readFloat(); break;
 			    case 0x25: burstDelay				= reader.readFloat(); break;
