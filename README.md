@@ -1,6 +1,6 @@
 
 # alo-viewer
-[![build](https://github.com/GlyphXTools/alo-viewer/actions/workflows/master.yml/badge.svg)](https://github.com/GlyphXTools/alo-viewer/actions/workflows/master.yml?query=branch%3Amaster)
+[![build](https://github.com/GlyphXTools/alo-viewer/actions/workflows/build.yml/badge.svg)](https://github.com/GlyphXTools/alo-viewer/actions/workflows/build.yml?query=branch%3Amaster)
 
 # About
 3D Viewer for Glyph's ALO files
