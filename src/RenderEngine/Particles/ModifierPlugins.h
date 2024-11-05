@@ -59,7 +59,8 @@ struct TrackBase
 template <typename T>
 struct Track : public TrackBase, public List< std::pair<float, T> >
 {
-    typedef std::pair<float, T> Key;
+    using Key = std::pair<float, T>;
+    using ListData = typename List< std::pair<float, T> >::ListData;
 
     struct Cursor
     {
