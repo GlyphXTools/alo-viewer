@@ -7,3 +7,9 @@
 
 ## Requirements
 Windows 7 or later (otherwise change Preprocessor Definition to _WIN32_WINNT=0x600)
+
+## Usage
+
+To run, just unzip the archive to a location of your choice and start AloViewer.exe.
+
+If you have trouble running the program, in particular when getting a "Missing d3dx9_??.dll" error, please download and install the [latest DirectX End-User Runtime](https://www.microsoft.com/en-us/download/details.aspx?id=35).
